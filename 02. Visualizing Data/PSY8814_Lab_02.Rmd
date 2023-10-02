@@ -1,0 +1,751 @@
+---
+title: "PSY 8814 - Lab 02: Data Visualization"
+author: "Linh Nguyen"
+date: "2023-09-15"
+output: 
+  pdf_document:
+    toc: TRUE
+urlcolor: blue
+---
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4, fig.width = 7)
+```
+
+In this lab, we'll review different ways of plotting in R. Specifically, we'll look at how we can create plots using either base R functions (e.g., `plot()`, `hist()`) or the `{ggplot2}` package. 
+
+For our plots, we'll use a data set called `trees` from the *datasets* package. As noted on the help page, this data set provides measurements of the diameter, height and volume of timber in 31 felled black cherry trees.
+
+```{r library}
+# Load libraries
+library(ggplot2)   # for plotting
+library(datasets)  # for loading in datasets
+library(gridExtra) # for arranging plots in a grid
+
+# Load trees data
+data("trees")
+
+# View first three observations of the data set
+head(trees, n = 3)
+
+# Number of rows/observations of the data frame
+nrow(trees)
+```
+
+# I. Basic Plots
+
+The `{ggplot2}` package has its own unique syntax or language for plotting. It follows this general structure:
+
+```{r ggplot2, eval = FALSE}
+# WHERE to get the data from
+ggplot(data = data_name,
+       
+       # WHAT variables to plot
+       aes(x = x_variable, y = y_variable)) +
+  
+  # HOW to plot the variables
+  geom_function() +
+  
+  # NAME the plot
+  labs(
+    title = "Main plot title",
+    x = "x-axis name",
+    y = "y-axis name"
+  ) +
+  
+  # STYLE the plot
+  theme_function()
+```
+
+There are many `geom_function`s in `{ggplot2}` such as `geom_point()` for scatterplots, `geom_histogram()` for histograms, `geom_line()` for line plots, etc. 
+
+There are also many `theme_function`s that can customize the style of your plots, such as `theme_minimal()`, `theme_classic()`, `theme_void()`, etc.
+
+## 1. Scatterplots
+
+Let's walk through some examples of generating scatterplots with either `plot()` or `ggplot()`. We'll make a scatterplot of tree height vs. volume.
+
+```{r scatter}
+# Create a scatterplot with base R
+# Arguments for plot:
+#   x = Vector of datapoints for the x-axis
+#   y = Vector of datapoints for the y-axis
+#   type = Plot type, "p" = point, "l" = line, "b" = both
+#   main = Plot title
+#   xlab = x-axis title
+#   ylab = y-axis title
+#   xlim = Minimum and maximum x-axis values
+#   ylim = Minimum and maximum y-axis values
+plot(x = trees$Height,
+     y = trees$Volume, 
+     type = "p",
+     main = "Scatterplot of Tree Height and Volume",
+     xlab = "Tree Height",
+     ylab = "Tree Volume",
+     xlim = c(60, 90),
+     ylim = c(min(trees$Volume), max(trees$Volume)))
+
+# Create a scatterplot with ggplot
+# Following the general ggplot structure:
+#   geom_function = geom_point() for scatterplot
+#   labs() = titles and labels
+#   xlim() = Minimum and maximum x-axis values
+#   ylim() = Minimum and maximum y-axis values
+#   theme_function = theme_classic() for a clean plot
+ggplot(data = trees, # data name and variable names
+       aes(x = Height, y = Volume)) +
+  # geom function for scatterplot
+  geom_point() +
+  # titles
+  labs(
+    title = "Scatterplot of Tree Height and Volume",
+    x = "Tree Height",
+    y = "Tree Volume"
+  ) +
+  # min and max values for x-axis and y-axis
+  xlim(c(60, 90)) +
+  ylim(c(min(trees$Volume), max(trees$Volume))) +
+  # additional theme for styling
+  theme_classic()
+```
+
+## 2. Line Plots
+
+Let's next look at how to create line plots. You will find that after learning the basic structure of these functions, you can simply change a few arguments to produce a completely different plot type. 
+
+For base R `plot()`, the main difference is to change the `type` argument. For `ggplot()`, we need to change to `geom_function`.
+
+Here, we'll use the dataset `AirPassengers`, which is a time-series of the number of airline passengers by month from 1949 to 1960.
+
+```{r line}
+# Load data
+data("AirPassengers")
+
+# Create data frame that has month (1 to 144)
+#   and corresponding passenger number
+airdata <- data.frame(
+  # variable Month: sequence starting at 1 and ending at the length of AirPassenger vector
+  "Month" = 1:length(AirPassengers),
+  
+  # variable PassengerNumber: all values from the AirPassengers data as a vector
+  "PassengerNumber" = as.vector(AirPassengers))
+
+# View first three observations of the data set
+head(airdata, n = 3)
+
+
+# Create line plot with base R
+# Arguments:
+#   lwd: Change line width
+#   lty: Change line type
+plot(x = airdata$Month,
+     y = airdata$PassengerNumber,
+     type = "l",
+     main = "Line Plot of Passengers by Month",
+     xlab = "Month",
+     ylab = "Number of Passengers",
+     lwd = 3,
+     lty = "dashed")
+
+# Create a line plot with ggplot
+# Following the general ggplot structure:
+#   geom_function = geom_line() for line plot
+#   labs() = titles and labels
+#   xlim() = Minimum and maximum x-axis values
+#   ylim() = Minimum and maximum y-axis values
+#   theme_function = theme_dark() for an interestingly dark plot
+ggplot(data = airdata, # data name and variable names
+       aes(x = Month, y = PassengerNumber)) +
+  # geom function for lineplot with specific arguments
+  geom_line(linetype = "dashed", size = 1.5) +
+  # titles
+  labs(
+    title = "Line Plot of Passengers by Month",
+    x = "Month",
+    y = "Number of Passengers"
+  ) +
+  # additional theme for styling
+  theme_dark()
+```
+
+## 3. QQ-Plots
+
+A QQ-plot compares the quantiles of a set of data values to the quantiles of a normal distribution. If a set of values are approximately normally-distributed, the quantiles will align across a 45 degree line.
+
+```{r qq}
+# Set seed for reproducibility
+set.seed(8814)
+
+# Generate 100 random deviates from a standard normal distribution
+x <- rnorm(n = 100, mean = 0, sd = 1)
+
+# Create a QQ-plot for x using base R
+# qqline() adds the 45 degree line
+qqnorm(y = x)
+qqline(x)
+
+# Create a QQ-plot for tree volume using base R
+qqnorm(y = trees$Volume)
+qqline(trees$Volume)
+
+# Create a QQ-plot for x using ggplot
+# The data argument in ggplot takes a data frame rather than a vector
+ggplot(data = data.frame(x), aes(sample = x)) +
+  # geom_function here is stat_qq()
+  stat_qq() +
+  # geom_function to add the theoretical line
+  stat_qq_line() +
+  labs(
+    title = "Normal Q-Q Plot with ggplot2",
+    x = "Theoretical quantiles",
+    y = "Sample quantiles"
+  ) +
+  theme_classic()
+
+# Create a QQ-plot for tree volume using ggplot
+ggplot(data = trees, aes(sample = trees$Volume)) +
+  # geom_function here is stat_qq()
+  stat_qq() +
+  # geom_function to add the theoretical line
+  stat_qq_line() +
+  labs(
+    title = "Normal Q-Q Plot for Tree Volume",
+    x = "Theoretical quantiles",
+    y = "Sample quantiles"
+  ) +
+  theme_classic()
+```
+
+## 4. Histograms and Density Functions
+
+For base R, we can use the `hist()` function to generate a histogram and add a smoothed density curve to the histogram using `density()`.
+
+For `{ggplot2}`, we can change our geom function to `geom_density()`.
+
+```{r hist-dense}
+# Compute density of tree volume
+vol.density <- density(trees$Volume)
+
+# Create a histogram with density line for tree volume using base R
+# freq = FALSE says to plot density on y-axis
+hist(trees$Volume, 
+     freq = FALSE,
+     col = "grey",
+     xlab = "Tree Volume",
+     main = "Histogram with Density Line")
+# Add density line
+lines(vol.density)
+
+# Create a histogram with density line for tree volume using ggplot
+ggplot(data = trees, aes(x = Volume)) +
+  geom_density(color = "darkblue", fill = "lightgrey") +
+  # try a "fun" theme with no non-data elements
+  theme_void()
+
+```
+
+# II. Customizing Plots
+
+## 1. Base R Customizations
+
+There are lots of options to customize your plots! Helpful arguments in base R `plot()` are:
+
+- `pch`: Change point shape
+- `col`: Change point/line color
+- `bty`: Change outer box type
+- `las`: Change orientation of axis labels
+- `lwd`: Change point/line width
+- `lty`: Change line type (e.g., dashed)
+
+Be aware of which arguments take numbers (e.g., `lwd = 2` creates a thicker line than `lwd = 1`) or character values (e.g., `col = "blue"`). The help page for `plot` is a great place to look!
+
+```{r customize-base}
+# Customized scatterplot with base R
+plot(x = trees$Height,
+     y = trees$Volume, 
+     main = "Customized scatterplot with base R",
+     xlab = "Tree Height",
+     ylab = "Tree Volume",
+     pch = 5, 
+     col = "darkblue", 
+     las = 2, 
+     bty = "n", 
+     lwd = 2)
+```
+
+## 2. `{ggplot2}` Customizations
+
+`ggplot()` also has many options for changing your graph type. If you type `vignette("ggplot2-specs")` into your R console, you'll find a vignette with different `ggplot()` customization options in your RStudio help pane.
+
+```{r customization-ggplot}
+# Customized scatterplot with ggplot
+ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  labs(
+    title = "Customized scatterplot with ggplot2",
+    subtitle = "with blue asterisks",
+    x = "Tree Height",
+    y = "Tree Volume"
+  ) +
+  theme_minimal()
+```
+
+Note that you can also save `ggplot` plots as named objects.
+
+```{r save-ggplot}
+# Recreate the above scatterplot, but this time saving as an object
+coolplot <- ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  labs(
+    title = "Customized scatterplot with ggplot2",
+    x = "Tree Height",
+    y = "Tree Volume"
+  ) +
+  theme_minimal()
+
+# Print plot
+coolplot
+```
+
+## 3. Adding Lines
+
+For base R, you can use the `abline()` function to a line to your plot. For example, you might add a vertical line, a horizontal line, or a regression line.
+
+For `{ggplot2}`, you can use the `geom_hline()` function for a horizontal line and the `geom_vline()` function for a vertical line.
+
+```{r add-line}
+# Customized scatterplot with base R
+plot(x = trees$Height,
+     y = trees$Volume, 
+     main = "Customized scatterplot with base R",
+     xlab = "Tree Height",
+     ylab = "Tree Volume",
+     pch = 5, 
+     col = "darkblue", 
+     las = 2, 
+     bty = "n", 
+     lwd = 2)
+
+# Add horizontal line at y = 50
+abline(h = 50, col = "red")
+
+# Add vertical line at the mean of tree height
+abline(v = mean(trees$Height), col = "green", lty = "solid")
+
+# Add regression line
+abline(lm(trees$Volume ~ trees$Height), col = "purple", lty = "dotdash")
+
+# Add lines to `coolplot`
+coolplot +
+  geom_hline(yintercept = 50, col = "red", linetype = "dashed") +
+  geom_vline(xintercept = mean(trees$Height), col = "green", linetype = "solid")
+```
+
+## 4. Mathematical Notations
+
+The `expression()` function can be used in base R to include mathematical symbols in your axis titles.
+
+```{r expression}
+# remove scientific notations
+options(scipen = 999)
+
+# Plot of tree height cubed and square root of volumme
+ggplot(data = trees, aes(x = trees$Height^3, y = sqrt(trees$Volume))) +
+  geom_point() +
+  labs(
+    title = expression(paste("Scatterplot of ", Height^3, " versus ", sqrt(Volume))),
+    x = expression(Height^3),
+    y = expression(sqrt(Volume))
+  ) +
+  theme_classic()
+plot(x = trees$Height^3, 
+     y = sqrt(trees$Volume),
+     xlab = expression(Height^3), 
+     ylab = expression(sqrt(Volume)))
+
+# Rename the x-axis title with the Greek letter theta
+ggplot(data = trees, aes(x = trees$Height^3, y = sqrt(trees$Volume))) +
+  geom_point() +
+  labs(
+    title = expression(paste("Scatterplot of ", theta, " versus ", sqrt(Volume))),
+    x = expression(theta),
+    y = expression(sqrt(Volume))
+  ) +
+  theme_classic()
+```
+
+## 5. Grouping
+
+### Add points from different groups
+
+For base R, you can use the `points()` function to add sets of points to a plot.
+
+For `{ggplot2}`, you can add grouping variables to `geom_point()` which allows for different types of points in your scatterplot.
+
+```{r group-point}
+# Group trees by diameter
+trees$DiameterGroup <- 0
+trees$DiameterGroup[trees$Girth > mean(trees$Girth)] <- 1
+trees$DiameterGroup <- factor(trees$DiameterGroup, labels = c("Small", "Large"))
+
+### BASE R ###
+# Scatterplot for "large diameter" trees
+plot(x = trees$Height[trees$DiameterGroup == "Large"],
+     y = trees$Volume[trees$DiameterGroup == "Large"], 
+     main = "Scatterplot based on Tree Diameter",
+     xlab = "Tree Height",
+     ylab = "Tree Volume",
+     pch = 5, 
+     col = "darkblue",
+     xlim = c(min(trees$Height), max(trees$Height)),
+     ylim = c(min(trees$Volume), max(trees$Volume)))
+
+# Add points for "small diameter" trees
+points(x = trees$Height[trees$DiameterGroup == "Small"],
+       y = trees$Volume[trees$DiameterGroup == "Small"],
+       pch = 1,
+       col = "orange")
+
+# Add a legend
+# First put the legend position
+# legend: Character list of point names
+legend("topleft",
+       legend = c("Large", "Small"),
+       col = c("darkblue", "orange"),
+       pch = c(5, 1))
+
+### GGPLOT ###
+# Grouped scatterplot
+ggplot(data = trees, aes(x = Height, y = Volume, 
+                         # add a grouping variable 
+                         #  and specify what aspect of the plot to change
+                         #  here we customize the color based on DiameterGroup
+                         color = DiameterGroup)) +
+  geom_point(shape = "asterisk") +
+  labs(
+    title = "Scatterplot based on Tree Diameter",
+    x = "Tree Height",
+    y = "Tree Volume",
+    # you can edit the legend for the grouping variable
+    color = "Diameter Group"
+  ) +
+  theme_classic()
+```
+
+
+### Add lines for different groups
+
+```{r group-line}
+# Create random grouping variable
+airdata$Group_Var <- sample(1:2, size = nrow(airdata), replace = T)
+airdata$Group_Var <- factor(airdata$Group_Var, labels = c("Group 1", "Group 2"))
+
+### BASE R ###
+# Create grouped line plot
+plot(x = airdata$Month[airdata$Group_Var == "Group 1"],
+     y = airdata$PassengerNumber[airdata$Group_Var == "Group 1"],
+     type = "l",
+     main = "Grouped Line Plot of Passengers by Month",
+     xlab = "Month",
+     ylab = "Number of Passengers",
+     lwd = 2,
+     col = "blue")
+
+# Add line for second group
+lines(x = airdata$Month[airdata$Group_Var == "Group 2"],
+      y = airdata$PassengerNumber[airdata$Group_Var == "Group 2"],
+      lwd = 2,
+      col = "orange",
+      lty = "dashed")
+
+# Add a legend
+legend("topleft",
+       legend = c("Group 1", "Group 2"),
+       col = c("blue", "orange"),
+       lty = c("solid", "dashed"))
+
+### GGPLOT ###
+# Create grouped line plot
+ggplot(airdata, aes(x = Month, y = PassengerNumber, 
+                    # add grouping variables
+                    # for geom_line, you need to specify a group parameter
+                    group = Group_Var, color = Group_Var)) +
+  geom_line() +
+  labs(
+    title = "Grouped Line Plot of Passengers by Month",
+    x = "Month",
+    y = "Number of Passengers",
+    # you can edit the legend for the grouping variable
+    color = "My grouping variable"
+  ) +
+  theme_classic() +
+  # scale_color_brewer changes the color scheme
+  scale_color_brewer(palette = "Dark2")
+```
+
+## 6. Faceting
+
+When we have multiple grouping variables, it can be helpful to display plots based on different groups. Faceting is especially easy to do in `{ggplot2}` with either `facet_grid()` or `facet_wrap()`.
+
+### With one grouping variable
+
+```{r facet-one}
+# Create faceted scatterplot by column
+ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  # different DiameterGroup are shown on different columns
+  facet_grid(. ~ DiameterGroup) +
+  labs(
+    title = "Scatterplot with ggplot2",
+    subtitle = "faceted by column",
+    x = "Tree Height",
+    y = "Tree Volume"
+  )
+
+# Create faceted scatterplot by row
+ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  # different DiameterGroup are shown on different rows
+  facet_grid(DiameterGroup ~ .) +
+  labs(
+    title = "Scatterplot with ggplot2",
+    subtitle = "faceted by row",
+    x = "Tree Height",
+    y = "Tree Volume"
+  )
+```
+
+### With two grouping variables
+
+```{r facet-two}
+# Create a second random grouping variable
+trees$Group_Var2 <- sample(1:2, nrow(trees), replace = T)
+trees$Group_Var2 <- factor(trees$Group_Var2, labels = c("A", "B"))
+
+# Create faceted scatterplot by both DiameterGroup and Group_Var2
+# using facet_grid columns
+ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  # different combinations of DiameterGroup and Group_Var2 shown on different columns
+  facet_grid(. ~ Group_Var2 + DiameterGroup) +
+  labs(
+    title = "Scatterplot with ggplot2",
+    subtitle = "Column-wise double faceted with DiameterGroup and Group_Var2",
+    x = "Tree Height",
+    y = "Tree Volume"
+  )
+
+# Create faceted scatterplot by both DiameterGroup and Group_Var2
+# using facet_grid rows
+ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  # different combinations of DiameterGroup and Group_Var2 shown on different row
+  facet_grid(Group_Var2 + DiameterGroup ~ .) +
+  labs(
+    title = "Scatterplot with ggplot2",
+    subtitle = "Row-wise double faceted with DiameterGroup and Group_Var2",
+    x = "Tree Height",
+    y = "Tree Volume"
+  )
+
+# Create faceted scatterplot by both DiameterGroup and Group_Var2
+# using facet_wrap
+ggplot(trees, aes(Height, Volume)) +
+  geom_point(color = "darkblue", shape = "asterisk") +
+  facet_wrap(DiameterGroup ~ Group_Var2) +
+  labs(
+    title = "Scatterplot with ggplot2",
+    subtitle = "Double faceted with DiameterGroup and Group_Var2",
+    x = "Tree Height",
+    y = "Tree Volume"
+  )
+```
+
+## 7. Combining Figures
+
+For base R, you can control the layout of plots using the `par()` function. This allows you to combine figures in multiple rows or columns.
+
+For `{ggplot2}`, you can control the layout using the `grid.arrange()` function from the `{gridExtra}` package. Make sure to install and load the package prior to using it.
+
+```{r layout-base}
+### BASE R ###
+# mfrow = c(i, j) where i is number of rows, j is number of columns
+# here, we're creating a 2 x 2 grid of plots
+par(mfrow = c(2, 2))
+
+# Generate plots
+plot(trees$Height, trees$Volume,
+     main = "Plot 1",
+     xlab = "Height", ylab = "Volume")
+plot(trees$Height, trees$Girth,
+     main = "Plot 2",
+     xlab = "Height", ylab = "Diameter")
+plot(trees$Height, sqrt(trees$Volume),
+     main = "Plot 3",
+     xlab = "Height", ylab = expression(sqrt(Volume)))
+plot(trees$Height, sqrt(trees$Girth),
+     main = "Plot 4",
+     xlab = "Height", ylab = expression(sqrt(Girth)))
+
+# Reset layout to original afterwards
+#   or else this layout will keep applying
+par(mfrow = c(1, 1))
+```
+
+```{r layout-ggplot}
+### GGPLOT ###
+# Generate plots and store it to different objects
+p1 <- ggplot(data = trees, aes(x = Height, y = Volume)) +
+  geom_point() +
+  labs(title = "Plot 1",
+       x = "Height", y = "Volume") +
+  theme_classic()
+p2 <- ggplot(data = trees, aes(x = Height, y = Girth)) +
+  geom_point() +
+  labs(title = "Plot 2",
+       x = "Height", y = "Girth") +
+  theme_classic()
+p3 <- ggplot(data = trees, aes(x = Height, y = sqrt(Volume))) +
+  geom_point() +
+  labs(title = "Plot 3",
+       x = "Height", y = expression(sqrt(Volume))) +
+  theme_classic()
+p4 <- ggplot(data = trees, aes(x = Height, y = sqrt(Girth))) +
+  geom_point() +
+  labs(title = "Plot 4",
+       x = "Height", y = expression(sqrt(Girth))) +
+  theme_classic()
+
+# arrange the plot in a 2 x 2 grid
+grid.arrange(p1, p2, p3, p4,
+             nrow = 2, ncol = 2)
+```
+
+
+# III. Creating a Plot Function
+
+There are many available functions in R, both from built-in packages and external packages that you can install. However, you can also create your own function to do whatever you may want. This is great when you do not want to rely on other people's functions and when you are repeated a code chunk many many times. It is good practice to *modularize* your code with custom functions instead of copying and pasting large code chunks to avoid human error.
+
+The basic syntax to create a function is:
+
+```{r func-syntax, eval = FALSE}
+function_name <- function(argument1, argument2, etc.) {
+  # do stuff to the argument values and assign it to an object
+  result <- "do things here"
+  # output the result
+  return(result)
+}
+```
+
+
+```{r func-simple}
+# create a simple function that adds up 2 numbers or vectors of numbers
+my_add_function <- function(num1, num2) {
+  results <- num1 + num2
+  return(results)
+}
+
+# test out the function
+my_add_function(num1 = 2, num2 = 10)
+my_add_function(num1 = trees$Height, num2 = trees$Girth)
+```
+
+Plotting provides a great example to modularize our code, because there is a lot of repetition across the code blocks. For instance, you might be creating a same type of plot with the same theme, but with different variables, such as our previous examples for QQ-plot. Instead of copying and pasting the code chunk, you can create a customized function for the QQ-plot design that you want and only edit the variable names.
+
+```{r func-plot}
+# plots without modularization
+p1 <- ggplot(data = data.frame(x), aes(sample = x)) +
+  # geom_function here is stat_qq()
+  stat_qq() +
+  # geom_function to add the theoretical line
+  stat_qq_line() +
+  labs(
+    title = "Normal Q-Q Plot with ggplot2",
+    x = "Theoretical quantiles",
+    y = "Sample quantiles"
+  ) +
+  theme_classic()
+
+p2 <- ggplot(data = trees, aes(sample = trees$Volume)) +
+  # geom_function here is stat_qq()
+  stat_qq() +
+  # geom_function to add the theoretical line
+  stat_qq_line() +
+  labs(
+    title = "Normal Q-Q Plot for Tree Volume",
+    x = "Theoretical quantiles",
+    y = "Sample quantiles"
+  ) +
+  theme_classic()
+
+# show the plots side-by-side
+grid.arrange(p1, p2, ncol = 2)
+
+# function to modularize the plot
+my_qq_plot_function <- function(p){
+  
+  # add stat_qq and stat_qq_line to the provided ggplot object
+  my_plot <- p + 
+    stat_qq() +
+    stat_qq_line() +
+    labs(
+      title = "Normal Q-Q Plot",
+      x = "Theoretical quantiles",
+      y = "Sample quantiles"
+    ) +
+    theme_classic()
+}
+
+# create the 2 plots using the function
+p3 <- my_qq_plot_function(p = ggplot(data = data.frame(x), aes(sample = x)))
+p4 <- my_qq_plot_function(p = ggplot(data = trees, aes(sample = trees$Volume)))
+
+# show the plots side-by-side - looks identical to before but much less code!!
+grid.arrange(p3, p4, ncol = 2)
+```
+
+*The sky's the limit* with modularization. You can customize and modularize pretty much anything you might want. The goal is to make your script file as neat as possible, with as little repetition as possible. Of course this takes time. Make sure your code works first before trying to modularize it! 
+
+Below, I'll add another parameter to the customized Q-Q plot function to also customize the plot's labels.
+
+```{r func-plot-labs}
+# function to modularize the qqplot with an additional argument to change label
+my_qq_plot_function <- function(p, var_name){
+  
+  # create customized title and labels based on provided parameter
+  plot_title <- paste("Normal Q-Q Plot for", var_name)
+  plot_y     <- paste("Sample quantiles for", var_name)
+  
+  # add stat_qq and stat_qq_line to the provided ggplot object
+  my_plot <- p + 
+    stat_qq() +
+    stat_qq_line() +
+    labs(
+      # use the previously defined titles and labels
+      title = plot_title,
+      x = "Theoretical quantiles",
+      y = plot_y
+    ) +
+    theme_classic()
+}
+
+# test the functions
+p5 <- my_qq_plot_function(p = ggplot(data = trees, aes(sample = trees$Volume)),
+                          var_name = "Tree Volume")
+
+p6 <- my_qq_plot_function(p = ggplot(data = trees, aes(sample = trees$Volume)),
+                          var_name = "something")
+
+# show the plots side-by-side
+grid.arrange(p5, p6, ncol = 2)
+```
+
+
+# IV. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman.
+- [The R Graph Gallery - Yan Holtz](https://r-graph-gallery.com/)
+- [Exploratory Data Analysis - John Tukey](https://www.amazon.com/Exploratory-Data-Analysis-John-Tukey/dp/0201076160)

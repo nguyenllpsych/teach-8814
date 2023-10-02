@@ -1,0 +1,340 @@
+---
+title: "PSY 8814 - Lab 04: Probability Distributions"
+author: "Linh Nguyen"
+date: "2023-09-29"
+format: 
+  html:
+    toc: TRUE
+engine: knitr
+filters:
+  - webr
+webr:
+  packages: ['ggplot2']
+  channel-type: "post-message"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4)
+```
+
+```{webr library, message = FALSE, warning = FALSE}
+library(ggplot2)
+```
+
+
+# I. Probability Distributions
+
+R has many built-in functions for working with different probability distributions. For each possible distribution (e.g., normal, $\chi^2$, $F$), there are four possible functions:
+
+- `d___` gives the density of the distribution at a value $x$
+- `p___` gives $P(X \leq x)$ with `lower.tail = TRUE` (the default), or $P(X > x)$ with `lower.tail = FALSE`
+- `q___` gives quantiles, so the value $x$ such that $F(x) = p$
+- `r___` gives random deviates of the specified distribution
+
+Importantly, `p__` and `q__` functions default to `lower.tail = TRUE` unless you change this argument explicitly. This means we are looking at the left tail of the distribution: the probability of getting a value **or lower values**. More clarifications later.
+
+## 1. Bernoulli and Binomial Distributions
+
+For a random variable $X$ that follows the Bernoulli distribution with probability $p$, each realization of the random variable has two possible outcomes (e.g., Success or Failure, 1 or 0, Heads or Tails, etc.). More specifically, the Bernoulli distribution is a discrete probability distribution such that $P(X = 1) = p$ and $P(X = 0) = 1 - p = q$.
+
+The Bernoulli and binomial distributions are closely related. If $Y$ is a a random variable that follows the binomial distribution with parameters $n$ and $p$, we write that $Y \sim B(n, p)$, and the probability mass function (PMF) is
+
+$$
+P(X = x) = \binom{n}{x}p^x(1-p)^{n-x} 
+$$
+where $\binom{n}{x} = \frac{n!}{x!(n-x)!}$. Here, $X$ can be thought of as the sum of independent Bernoulli trials. Moreover, if $n = 1$, then we have 
+
+$$
+P(X=x) = \binom{1}{x}p^x(1-p)^{1-x}. 
+$$
+
+Given that $X$ can only take on values of 0 or 1, we can see that
+
+$$
+P(X = 1) = \frac{1!}{1!(1-1)!}p^1 (1-p)^0 = 1\times p^1 = p 
+$$
+
+and
+
+$$
+P(X = 0) = \frac{1!}{1!(1-0)!}p^0 (1-p)^1 = 1-p 
+$$
+
+which brings us to the PMF for the Bernoulli distribution!
+
+```{webr rbinom}
+# set seed for reproducibility
+set.seed(8814)
+
+# Bernoulli distribution
+# Flip a fair coin once,
+# n = number of observations
+# size = number of trials
+rbinom(n = 1, size = 1, prob = 0.5)
+
+# Bernoulli distribution
+# Flip a single fair coin 1000 times
+bern_data <- rbinom(n = 1000, size = 1, prob = 0.5)
+
+# Mean and variance
+# E(X) = p = 0.5
+# Var(X) = p*(1-p) = 0.25
+# should be close to the theoretical values!
+mean(bern_data)
+var(bern_data)
+
+# Binomial distribution
+# Flip a set of 10 fair coins 10 times, 
+# Record number of heads in each trial
+(bern_data2 = rbinom(n = 10, size = 10, prob = 0.5))
+
+# Mean and variance
+# E(X) = n*p = 10*0.5 = 5
+# Var(X) = n*p*(1-p) = 10*0.5*0.5 = 2.5
+mean(bern_data2)
+var(bern_data2)
+
+# What if we increase the number of random observations?
+# The sample mean and variance are closer to E(X) and Var(X)
+mean(rbinom(n = 1000, size = 10, prob = 0.5))
+var(rbinom(n = 1000, size = 10, prob = 0.5))
+```
+
+## 2. Normal Distribution
+
+The normal distribution is perhaps one of the most common probability distributions that is used in social science research. The normal distribution is characterized by two parameters, $\mu$ and $\sigma^2$. We write a normally-distributed random variable as $X \sim N(\mu, \sigma^2)$. *Important*: $\sigma^2$ is the variance, not the standard deviation.
+
+The probability density function (PDF) for the normal distribution is:
+
+$$
+f(x; \mu, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{\big[-\frac{(x-\mu)^2}{2\sigma^2}\big]}
+$$
+
+We've already seen how we can generate random deviates from the normal distribution using `rnorm()`. The default values are $\mu = 0$ and $\sigma^2 = 1$, which is the *standard* normal distribution.
+
+```{webr rnorm}
+# set seed for reproducibility
+set.seed(8814)
+
+# Generate 10 random deviates from N(0, 1)
+x <- rnorm(10)
+
+# Compute the mean and variance of x
+mean(x)
+var(x)
+
+# What if we increase the number of random observations?
+# The sample mean and variance are closer to mu and sigma^2
+mean(rnorm(n = 100000))
+var(rnorm(n = 100000))
+```
+
+## 3. Additional Distributions
+
+Here are functions for additional probability distributions that are available in R.
+
+- Continuous uniform distribution
+    + `dunif()`
+    + `punif()`
+    + `qunif()`
+    + `runif()`
+- $\chi^2$ distribution
+    + `dchisq()`
+    + `pchisq()`
+    + `qchisq()`
+    + `rchisq()`
+- $t$ distribution
+    + `dt()`
+    + `pt()`
+    + `qt()`
+    + `rt()`
+- $F$ distribution
+    + `df()`
+    + `pf()`
+    + `qf()`
+    + `rf()`
+
+# II. Probability Functions
+
+## 1. Probability Mass Function (PMF)
+
+A PMF is for a **discrete** random variable: $X$ takes on a finite, countable set of values. For example, number of children is a discrete value. Unlike what the average statistic tells us, we cannot actually have 2.5 children. 
+
+The PMF tells us the probability of obtaining any value $x$, given the parameters of the distribution. In other words, the PMF tells us $P(X = x)$. For example, how likely is it to have 1 child, 2 children, ..., 10 children? 
+
+Defining characteristics of PMF:
+
+- The sum of probabilities for all possible values of $x$ is 1
+- For any possible value of $x$, the probability $P(X = x)$ is greater than zero
+
+PMF density plot:
+
+- A set of vertical lines at each value of $x$
+- The line height: the associated probability of that value. 
+- If a value of $x$ is not in the *support* of $X$, that probability is zero. For example, it is impossible to get 11 heads out of 10 coin tosses.
+
+Here is an example of a PMF for $X \sim \text{Binomial}(10, 0.5)$, where $10$ is the parameter $n$ and $0.5$ is the parameter $p$ in the binomial distribution. For example, tossing a fair coins 5 times and counting the number of heads.
+
+```{webr pmf-data}
+# generate data
+head_count   <- 0:10
+head_density <- dbinom(head_count, size = 10, prob = 0.5)
+```
+
+```{webr pmf-plot}
+# plot the distribution
+plot(head_count, head_density, 
+     # type = "h" for histogram or high-density
+     type = "h",
+     main = "Density of a binomial distribution with n = 10 and p = 0.5",
+     sub = "Very rare to get 1 or 10 heads out of 10 coin tosses")
+```
+
+## 2. Probability Density Function (PDF)
+
+A PDF is for a **continuous** random variable: $X$ takes on an infinite, non-countable set of values. For example, height is a continuous variable because it can theoretically take on infinite decimal places: 5 foot 4.3314132... inches and so on.
+
+Defining characteristics of PDF:
+
+- The height of the PDF plot: the *density* rather than the *probability*.
+- The area under the curve or integral: the *probability* of a range.
+- The entire area under the curve of a PDF is 1. The PMF uses the sum instead.
+- For any specific possible value of $x$, the probability $P(X = x) = 0$. This is because there is an infinite list of possible values.
+- We instead calculate a probability range, or $P(a < X < b)$ using integration (or R). We can't calculate the exact probability that someone is 5 foot 4.3312... inches, but we can calculate the probability that they are between 5'4" and 5'5".
+
+Here is an example of the normal distribution of height in inches:
+
+```{webr pdf}
+# generate data
+height <- rnorm(n = 100000, mean = 66, sd = 3)
+
+# plot data
+ggplot(data = as.data.frame(height), aes(x = height)) +
+  geom_density(color = "#FFCC33", fill = "#7A0019") +
+  theme_classic()
+```
+
+## 3. Cumulative Distribution Function (CDF)
+
+A CDF tells us the probability that the random variable takes on a value less than or equal to some number, $P(X \leq x)$. So as we increase $x$, $P(X \leq x)$ gets closer and closer to one. The CDF will look different for a discrete versus a continuous $X$. We use $F(x)$ to denote a CDF. 
+
+The CDF is related to both PMF and PDF. For a PMF $f(x)$, we can calculate $F(x)$ as:
+
+$$ F(x)=\sum_{t\leq x}f(t). $$
+
+For a PDF $f(x)$ where $-\infty < x < \infty$, we have:
+
+$$ F(t)=\int_{-\infty}^x f(t)dt. $$
+
+### a. Discrete CDF example:
+
+Using the coin toss example above, let's calculate probability! Here are some handy functions for the Binomial distribution:
+
+- `dbinom()` function: find probability at a given value for the binomial distribution
+- `pbinom()` function: find probability across a range of values
+- `qbinom()` function: find the smallest number of successes $q$ given a specific probability $p$ such that $\Pr(X \leq q) \geq p$
+
+What is the probability of getting exactly 8 heads out of 10 fair coin tosses $P(X = 8)$?
+
+```{webr pmf-value}
+# dbinom exact probability
+dbinom(x = 8, size = 10, prob = 0.5)
+```
+
+What is the probability of getting between 3 and 5 heads out of 10 coin tosses $P(3 \leq X \leq 5)$? We can do this with both `dbinom()` and `pbinom()`:
+
+```{webr pmf-range}
+# dbinom probability from 3 through 5
+sum(dbinom(x = 3:5, size = 10, prob = 0.5))
+
+# pbinom probability of getting 5 or below
+#   minus probability of getting 2 or below
+#   equal probability of getting 3, 4, or 5
+pbinom(q = 5, size = 10, prob = 0.5) - 
+  pbinom(q = 2, size = 10, prob = 0.5)
+```
+
+Conversely, what is the smallest number of headcounts that would be associated with at least 25% probability?
+
+```{webr pmf-quantile}
+# qbinom success range for a given probability
+qbinom(p = 0.25, size = 10, prob = 0.5)
+
+# double check against pbinom
+pbinom(q = 3, size = 10, prob = 0.5) # too small < 0.25
+pbinom(q = 4, size = 10, prob = 0.5) # >= 0.25
+```
+
+### Try it yourself!
+
+Say we are curious about lottery winnings and wonder what our chances are after buying 50 lottery tickets, each with a 1% chance of winning. Let the number of winnings be $X \sim B(50, 0.01)$
+
+- What is the probability of not winning at all?
+- What is the probability of winning on all 50 tickets?
+- What is the probability of winning at least once?
+- What is the number of winnings that is associated with at least 10% probability?
+- What if we sampled 2 gamblers. What is the probability that either of them wins at least once?
+- What is the probability that they both win at least once?
+
+```{webr ex-pmf}
+# insert your code here
+```
+
+### b. Continuous CDF example:
+
+Using the height example, let's calculate some probability! Similar to before, here are some handy functions for the normal distribution:
+
+- `dnorm()` function: find density at a given value for the normal distribution
+- `pnorm()` function: find probability across a range of values
+- `qnorm()` function: find score that is associated with a specific probability
+
+As previously mentioned the probability of getting an exact continuous value is zero: $P(X = x) = 0$. We can instead calculate the probability for a **range** of values:
+
+What is the probability of being between 70 and 80 inches (roughly 5'8 and 6'7)?
+
+```{webr pdf-range}
+# pnorm probability of being 80 inches or below
+#   minus probability of being 70 inches or below
+#   equal probability of being between 70 and 80 inches
+pnorm(q = 80, mean = 66, sd = 3) -
+  pnorm(q = 70, mean = 66, sd = 3)
+```
+
+We can also visualize this range on the density plot. The probability above is the area under the curve between the two vertical lines:
+
+```{webr pdf-range-plot}
+# density plot same as before
+ggplot(data = as.data.frame(height), aes(x = height)) +
+  geom_density(color = "#7A0019", fill = "#7A0019") + 
+  # adding vertical lines indicating 70 and 80 inches
+  geom_vline(xintercept = 70, color = "#FFCC33") +
+  geom_vline(xintercept = 80, color = "#FFCC33") +
+  # add some annotation
+  annotate("text",
+           label = "Shaded area here is ~ 9% of \nthe entire shaded area",
+           x = 75, y = 0.10)+
+  theme_classic()
+```
+
+### Try it yourself!
+
+Let IQ scores be normally distributed: $X \sim N(100, 225)$. 
+
+- What is the probability of scoring 70 or below?
+- What is the probability of scoring at least 180?
+- What is the probability of scoring between 85 and 115?
+- What score is considered the 99th percentile?
+
+```{webr ex-pdf}
+# insert your code here
+```
+
+
+# III. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman.
+- The interactive document is built using [quarto-webr](https://quarto-webr.thecoatlessprofessor.com/)
+- [Penn State University STAT 414 Section 2: Discrete Distributions](https://online.stat.psu.edu/stat414/section/2)
+- [Penn State University STAT 414 Section 3: Continuous Distributions](https://online.stat.psu.edu/stat414/section/3)

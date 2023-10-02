@@ -1,0 +1,555 @@
+---
+title: 'PSY 8814 Lab 01: Introduction'
+author: "Linh Nguyen"
+date: "2023-09-08"
+output:
+  pdf_document: 
+    toc: true
+urlcolor: blue
+---
+
+```{r setup, echo = FALSE, message = FALSE}
+# set global options
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Load necessary packages
+library(dplyr)
+```
+
+# I. Lab Introduction
+
+Welcome to the lab section for PSY 8814. Here, you will have hands-on practice to reinforce your lecture materials. Your lab TA is Linh Nguyen (she/her). I am a 5th year in the PIB area. My office hour is on Fridays from 1-3pm at Elliott Hall room S343. Please shoot me a quick email at [nguy4006\@umn.edu](mailto:nguy4006@umn.edu){.email} if you plan on stopping by! All labs are recorded and uploaded to Canvas. If you cannot attend in-person, feel free to join via Zoom; however, please remember that this option is a last-resort because I can only focus on the in-person students.
+
+Much of the lab notes for this course are based on previous works by Allie Cooperman and Justin Kracht and adapted by Linh Nguyen.
+
+# II. R Introduction
+
+Welcome to a crash-course in using R statistical software! R is a fantastic, open-source tool for all of your data analysis projects. R is the programming language and RStudio is the user interface where you can use the language. It is a great tool for data analysis because (1) it is free (2) with a huge supporting community and (3) it promotes transparency by creating a "paper" trail of all your analytic steps unlike a point-and-click software that does not track what has been done to the data. We will first go through the basics of coding in R. We assume that you already have R and RStudio installed on your local machine.
+
+## 1. Coding Basics
+
+You can write R code either directly into the console or with an R script (a file that ends in `.R`). I recommend using R scripts as much as possible so that you routinely save, and can come back to, your work. To create a new R script when using RStudio, go to File $\rightarrow$ New File $\rightarrow$ R Script.
+
+R is an object-oriented language. You can either run a line of code and see the output in the console, or can save the output to an object. R has two assignment operators: `<-` and `=`. Let's say I want to create a vector with three elements, $\{1, 9, 7\}$. I will name my vector `x`, and define it by writing:
+
+```{r create}
+# Create vector x
+x <- c(1, 9, 7)
+```
+
+Now I have an object `x` in my global environment (if you're following along in your own R script, look at the Environment pane in your RStudio window). The `c()` function stands for "concatenate", and puts these three numbers into a vector that I can then call by writing `x`:
+
+```{r print}
+# Print x to the console
+x
+```
+
+You can name an object whatever you may like, BUT it is good practice to have specific and unique names. For example, if you create an object called `c`, this can write over the concatenate function of the same name `c()`.
+
+There are many types of objects in R, including matrices, arrays, data frames, and lists.
+
+-   In a matrix, all elements (columns or rows) will have the same variable type (e.g., character, numeric)
+-   In a data frame, columns can have different variable types, so one column might have numbers and another might have qualitative indicators (e.g., "counseling", "PIB", or "social").
+
+In the code below, putting parentheses around the full line tells R not only to assign the object to the given name, but *also* print the corresponding output to the console.
+
+```{r objects}
+# Create a matrix
+# 1:9 means to create a vector of numbers from 1 through 9
+(example_matrix <- matrix(data = 1:9, nrow = 3, ncol = 3))
+
+# Create a data frame
+(example_df <- data.frame("age"  = c(25, 30, 22, 35, 27, 29),
+                          "area" = rep(c("counseling", "PIB", "social"), 2)))
+```
+
+You can also perform a plethora of operations with numbers and objects:
+
+```{r operations}
+# Define some objects as nummbers
+x <- 10
+y <- 5
+
+# Addition
+2 + 2
+x + y
+
+# Subtraction
+3 - 8
+x - y
+
+# Multiplication
+6*2
+x*y
+
+# Division
+6/2
+x/y
+
+# Exponents
+3^2
+y^x
+
+# Matrix multiplication
+W <- matrix(1:9, ncol = 3, nrow = 3)
+Z <- matrix(10:18, ncol = 3, nrow = 3)
+W %*% Z
+
+# %in%
+x <- c(1,5,8,9)
+5 %in% x
+
+# Logical tests
+10 == 5 + 5
+10 == 5 + 4
+10 != 6 + 3
+10 >= 9
+10 > 9
+10 < 9
+(10 > 9) & (10 < 20)
+(10 > 9) | (10 < 9)  # | indicates "or"
+```
+
+You may instead want to identify and work with just a subset of the data.
+
+```{r subset}
+# Set seed for reproducibility
+set.seed(8814)
+
+# Create a vector of numbers
+# Randomly sample 10 values from 1 through 50 without replacement
+x <- sample(x = 1:50, size = 10, replace = FALSE)
+x
+
+# Show first five elements of x
+x[1:5]
+
+# Show third, sixth, and ninth elements of x
+x[c(3, 6, 9)]
+
+# Replace last element of x with 1000
+x[10] <- 1000
+x
+
+# Subset first two columns of example.matrix
+example_matrix[, 1:2]
+example_matrix[, -3]
+
+# Subset element in third row, second column of example.matrix
+example_matrix[3, 2]
+
+# We can alternatively subset using names
+example_df[, "age"]
+```
+
+In an R script file, anything to the left of a hashtag is considered a comment. Make sure to comment often! Comments are not only great for telling your collaborators what you are doing, but are also helpful reminders for when you come back to an R script after many months away.
+
+## 2. Working with Packages
+
+When you install R, you get a bunch of built-in functions. These functions are housed in systems called packages, and many packages (like `base` and `stats`) are automatically loaded when you open R. However, one of the great aspects of R is that users can create and share their own packages to tackle analysis challenges. These packages are then hosted on CRAN and/or GitHub, and you can install the package to your R directory. To install the package, you can either use the `install.packages()` function, or use the "Packages" pane in your RStudio window. Here's an example to install the `ggplot2` package. This package is used for creating beautiful graphs.
+
+```{r install, eval = FALSE}
+# Install ggplot2
+install.packages("ggplot2")
+```
+
+You only need to install a package once. Then, to use functions from that package in your work, load the package using the `library()` function every time you open R. You should load any necessary packages at the beginning of your R script, otherwise you'll get an error that certain functions cannot be found.
+
+```{r load}
+# Load ggplot2 package
+library(ggplot2)
+```
+
+Many data wrangling activities (e.g., filtering/subsetting, summarizing, create scale scores, etc.) can be done either using built-in base R functions or functions from the `dplyr` package.
+
+## 3. Working with Functions
+
+Much of the operations and analyses in R are encapsulated in functions. Above, calls like `library()` and `install.packages()` are both functions. A function takes a set of arguments, performs some operations, and returns one or more values. There are **tons** of functions available in R, and you can also create your own! Here are some common functions you might use in your analyses:
+
+```{r functions}
+# Create some vectors of data
+# rnorm generates deviates of a normal distribution with 
+# the given mean and standard deviation
+x <- rnorm(100, mean = 0, sd = 1)
+y <- rnorm(100, mean = 1, sd = 1)
+
+# Find the mean of x
+mean(x)
+
+# Find the standard deviation of x
+sd(x)
+
+# Compute sum of the elements of x
+sum(x)
+
+# Generate summary statistics for x
+summary(x)
+
+# Find correlation between x and y
+cor(x, y)
+
+# Append x and y into a 100x2 matrix
+# 100 rows, 2 columns
+xymat <- cbind(x, y)
+
+# Append x and y into a 2x100 matrix
+# 2 rows, 100 columns
+xymat2 <- rbind(x, y)
+
+# Create a sequence of numbers 
+seq(-3, 3, by = 0.5)
+
+# Round to three decimal places
+round(mean(x), 3)
+```
+
+Each function in a package has an associated help page. This documentation reviews the function's arguments, the returned values, and other details that help users understand what is happening when they call the function. To find a help page directly in the R console, type `??packagename::functionname`:
+
+```{r help, eval = FALSE}
+# Pull up help page for mean function
+??base::mean
+```
+
+If you're using RStudio, you'll see a list of associated help pages under the "Help" pane. Including the package name with two colons *before* the function name is helpful when many packages have a function with a similar name. You can also manually search for a function in the search box under the "Help" pane.
+
+You might also want to see the source code for a given function. First, you can write `packagename:::functionname` directly in the console. Alternatively, you can write `View(packagename::functionname)`, and a separate window will pop up with the source code.Working with Data Sets
+
+## 4. Importing Data
+
+In most of our research, we work with data sets. Many R packages come with built-in data sets. After loading the package (e.g., using `library()`), you can call a data set using the `data()` function and learn more info about the dataset by using `?datasetname`
+
+```{r data}
+# Load `datasets` package
+library(datasets)
+
+# Load `attitude` data set within the `datasets` package
+data("attitude")
+
+# Look at first 6 rows of the `attitude` data set
+head(attitude)
+```
+
+More often, you'll likely import your data from another file, such as a CSV or Excel file. For example, you can use the `read.csv()` function to bring in a CSV file by specifying its destination relative to your script file's location:
+
+```{r import, eval = FALSE}
+# Import CSV file
+my_df <- read.csv("FilePath/DataSetName.csv")
+```
+
+There are also numerous packages that allow you to read in and save an Excel, SPSS, Stata, SAS, or CSV file, such as the `rio` package with the `import()` and `export()` functions. Make sure to take a look at these functions' documentation pages for ways to ensure that your imported data structure matches your expectations.
+
+## 5. Understanding the Data Structure
+
+After loading our data, we want to better understand the structure. There are numerous handy functions that provide insight into how the data set is set up. In the examples below, I'll use the `attitude` data set that I loaded above.
+
+```{r structure}
+# Data "class"
+class(attitude)
+
+# Dimensions (rows, columns)
+dim(attitude)
+
+# Number of rows or columns
+nrow(attitude)
+ncol(attitude)
+
+# Column/variable names
+names(attitude)
+
+# Variable types
+str(attitude)
+
+# Another way to look at the data with the dplyr package
+dplyr::glimpse(attitude)
+
+# Summaries of all variables
+summary(attitude)
+
+# Summary of "learning" variable
+summary(attitude$learning)
+```
+
+In a data set (and in R more generally), it is important to know and properly set the data type for each variable. The `str` function above told us that all variables are `num`, indicating **numeric** (or quantitative) variables. Other data types include:
+
+-   **Character**: String elements, like "Yes", "A", or "This is an element".
+-   **Integer**: Numeric integer elements, like 3, 6, or 1000.
+-   **Logical**: Elements are `TRUE` or `FALSE`.
+-   **Factor**: Elements are a set of mutually-exclusive levels with an associated label, like school type with three levels ("Elementary", "Middle", "High").
+
+```{r data-type}
+# Character vector
+vector_character <- c("Allie", "Elliot", "Goldy")
+class(vector_character)
+
+# Numeric and integer vectors
+vector_numeric <- c(3.5, 6.7, 1000.2938)
+class(vector_numeric)
+(vector_integer <- as.integer(vector_numeric))
+
+# Logical vector
+# rep() repeats the sequence where each element is repeated twice
+(vector_logical <- rep(c(TRUE, FALSE), each = 2))
+class(vector_logical)
+
+# Factor vector
+(vector_factor <- as.factor(vector_character))
+```
+
+Be aware that when you import data into R, your variables may be a different data type than desired. For example, any variable with string elements (e.g., letters, phrases, anything other than numbers) are often set as character variables. You may then need to transform these variables into factors for your analyses. So it's always good to check the data structure and variable types at the beginning of your analyses!
+
+## 6. Missing Values
+
+The symbol `NA` stands for a missing value in R. The function `is.na()` is helpful for understanding how many missing values you have in a vector.
+
+```{r missing}
+# Create a vector with missing values
+x <- rnorm(20)
+x[sample(1:20, 5, replace = FALSE)] <- NA
+x
+
+# is.na creates a logical vector where 
+# TRUE = value is missing, FALSE = value is not missing
+is.na(x)
+
+# How many missing values do we have?
+sum(is.na(x))
+```
+
+If you are importing data into R (e.g., using `read.csv`), be aware of how missing values are coded in the original data set. For example, many researchers use a variation of 999 or -999 to identify missing values in their data. When reading in your data, you can usually specify the values that should be transformed to `NA` in R. For example, `read.table` and its variations (such as `read.csv`) have the argument `na.strings`.
+
+```{r read, eval = FALSE}
+# Read in data and specify missing values
+mydata <- read.csv("FilePath/DataSetName.csv", na.strings = "999")
+```
+
+Remember to always be aware of missing values, and include missing values in your exploratory data analyses!
+
+## 7. Subsetting Data
+
+There are multiple ways to subset data in R. Here, let's use the data set `ToothGrowth`, which has information on tooth length in guinea pigs who were given one of two vitamin C supplement types.
+
+```{r toothgrowth}
+# Load data
+data("ToothGrowth")
+
+# View first six observations
+head(ToothGrowth)
+```
+
+We can subset the data to only include guinea pigs given orange juice. Here are three different ways to do so:
+
+```{r subset-data}
+# Subset guinea pigs given OJ, first way
+grouped_1 <- ToothGrowth[ToothGrowth$supp == "OJ", ]
+
+# Subset guinea pigs given OJ, second way
+grouped_2 <- subset(ToothGrowth, ToothGrowth$supp == "OJ")
+
+# Subset guinea pigs given OJ, third way (with dplyr package)
+grouped_3 <- dplyr::filter(ToothGrowth, ToothGrowth$supp == "OJ")
+
+# All equal?
+cbind(grouped_1, grouped_2, grouped_3)
+```
+
+We could also look at observations with tooth length greater than 25.
+
+```{r subset-data2}
+# Subset guinea pigs with tooth length greater than 20
+ToothGrowth[ToothGrowth$len > 25, ]
+```
+
+It's also possible to compute descriptive statistics by groups.
+
+```{r subset-descr}
+# Descriptive statistics for tooth length by supplement type
+# using base function `aggregate`
+aggregate(ToothGrowth$len, by = list(ToothGrowth$supp), FUN = summary)
+
+# Descriptive statistics for tooth length by supplement type
+# using dplyr functions with pipes
+ToothGrowth %>%
+  group_by(supp) %>%
+  summarise(mean_length = mean(len),
+            sd_length = sd(len))
+```
+
+## 8. Graphing
+
+R has a plethora of graphing capabilities, both using the built-in R packages or by installing alternative packages such as `ggplot2`.
+
+The `plot()` function is standard for plotting with the built-in R packages, and there is lots of room for user customization. Below, I've included some examples of different plots that one can create just with simulated data.
+
+```{r plot}
+# Scatterplot using base R function plot()
+# x: Variable on the x-axis
+# y: Variable on the y-axis
+# type: Plot type, "p" stands for points
+# main: Plot title 
+# xlab: Label for x-axis
+# ylab: Label for y-axis
+plot(x = attitude$complaints, 
+     y = attitude$advance, 
+     type = "p", 
+     main = "Scatterplot of two variables",
+     xlab = "Handling of employee complaints",
+     ylab = "Advancement")
+
+# Scatterplot with different point color
+plot(x = attitude$complaints, 
+     y = attitude$advance, 
+     type = "p", 
+     main = "Scatterplot of two variables in blue",
+     xlab = "Handling of employee complaints",
+     ylab = "Advancement", 
+     col = "blue")
+
+# Line plot
+# type: Plot type, "l" stands for line
+plot(x = attitude$complaints, 
+     type = "l", 
+     main = "Scatterplot of two variables in blue",
+     xlab = "Handling of employee complaints",
+     ylab = "Observations", 
+     col = "blue")
+
+# Line plot with different point types and color
+# type: Plot type, "b" stands for both
+plot(x = attitude$complaints, 
+     type = "b", 
+     main = "Scatterplot of two variables in red",
+     xlab = "Handling of employee complaints",
+     ylab = "Observations", 
+     col = "red")
+
+# Histogram
+# freq: Whether to plot frequency or density on y-axis
+hist(x = attitude$raises, 
+     main = "Histogram of raises based on performance",
+     freq = TRUE, 
+     col = "orange")
+
+# Boxplot
+boxplot(x = attitude$learning, 
+        main = "Box plot of opportunity to learn")
+```
+
+# III. R Markdown Introduction
+
+We've seen R scripts, where we can write and save all of our R code to process and analyze our data. Specifically, R scripts primarily contain R code. On the other hand, R Markdown integrates R code and text to create dynamic research documents. These documents combine analyses with text and figures, all in one file. This is great for supporting reproducible research! Then, small changes in your analyses are automatically updated within your report. This means you don't have to re-do decimal points in an extensive table when your advisor asks for 99% confidence intervals instead of 95%!
+
+With R Markdown, you can create PDF documents, HTML files, presentation slides, and even manuscripts. All of this can be done right in RStudio. In this class, we'll focus on PDF documents, because we hope that you'll use R Markdown for your course assignments.
+
+(All lab notes were created with R Markdown!)
+
+## 1. Getting Started
+
+In RStudio, go to **File** $\rightarrow$ **New File** $\rightarrow$ **R Markdown**. This brings up up a pop-up window where you can set up key features of the document. Here you can add a title, author name, and the default output format. A Markdown file is denoted by ".RMD" in the file path.
+
+Note that at some point with Markdown files, you might have to download TeX. TeX (related to LaTeX) is a typesetter application, and is popular in statistics because you can easily format equations. TeX can be downloaded through UMN's self-service application.
+
+## 2. Formatting
+
+Let's start with some general formatting. You can create headers by using a series of hashtags. The first level header is denoted by one hashtag (`#`). Subsequent headers are denoted by two hashtags (`##`), three hashtags (`###`), etc.
+
+```         
+# First Header
+
+## Sub-Header
+
+### Sub-Sub-Header
+```
+
+You can *italicize* text by using one asterisk before and after the text section (`*text*`), or you can **bold** text with two asterisks (`**text**`). You can also include a bullet point list with dashes, asterisks, or $+$:
+
+```         
+- Point 1
+    + Subpoint 1
+    + Subpoint 2
+* Point 2
++ Point 3
+```
+
+becomes
+
+-   Point 1
+    -   Subpoint 1
+    -   Subpoint 2
+-   Point 2
+-   Point 3
+
+## 3. Integrating R Code
+
+### Code Chunks
+
+Code chunks allow you to integrate R code with your text, and then see the output of your analyses right in the document.
+
+You can insert a chunk by clicking **Insert** $\rightarrow$ **R** in the top right corner of your R Markdown file. A chunk begins with three backticks, a closed bracket (`{r}`) that can include various chunk options, and ends with three more backticks.
+
+```` md
+```{r}`r ''`
+```
+````
+
+The chunk options you may choose include:
+
+-   `echo = TRUE`: Show the contents of the chunk code
+-   `results = "hide"`: Show and run the code, but do not display any output
+-   `eval = FALSE`: Show, but do not run, the code
+-   `cache = TRUE`: Save the code results so that the chunk will only re-run when you make a change within the chunk. Use with caution!!
+-   `fig.height = 3`: Set the figure height (there is a similar option for figure width)
+
+If you would like to set global options for your code chunks, you can include a variation of the following code in a chunk at the beginning of your file.
+
+```{r chunk-not-run, eval = FALSE}
+knitr::opts_chunk$set(cache   = FALSE, 
+                      echo    = TRUE)
+```
+
+Let's create a plot for our data!
+
+```{r result-format, results = "asis"}
+# Create data vectors
+x <- rnorm(100)
+y <- rnorm(100)
+
+# Plot scatterplot
+plot(x, y, type = "p", main = "A Beautiful Scatterplot")
+abline(lm(y ~ x))
+```
+
+### In-Line Code
+
+R code can also be incorporated directly into your text. You can execute code inline by wrapping the segment with backticks and place an "r" after the first backtick:
+
+````{verbatim}
+`r 2 + 2`
+````
+
+The above `2+2` becomes `r 2+2` in your text. This format applies to more complex computations. Let's say that you're computing the mean of the vector $\mathbf{x}$. First generate $\mathbf{x}$.
+
+```{r inline-example}
+set.seed(123)
+x <- sample.int(20, size = 10, replace = FALSE)
+```
+
+To report the mean, you can put `mean(x)` in your inline code: The mean of the vector is `r mean(x)`. When including code inline, it can be helpful to use the `round()` function. This rounds your output to a specified number of digits.
+
+## 4. "Knitting" the Document
+
+Once you've written your document, you can compile or "knit" the final output by clicking the **knit** button in the top left of the R Markdown pane of RStudio. Your compiled document will then be in the same folder as where you saved your Markdown file. Note that to use LaTeX within a Markdown file, you need to have a LaTeX engine (e.g., [MikTex](https://miktex.org/download)) installed on your computer. You can also use the `tinytex` package for this:
+
+```{r tinytex, eval = FALSE}
+install.packages("tinytex")
+tinytex::install_tinytex()
+```
+
+# IV. Helpful Resources and References
+
+There are *many*, perhaps too many, online resources that can help you with R and R Markdown. It can be overwhelming at first if you are new to R, but these select few resources might be helpful for future references:
+
+-   [YaRrr! The Pirate's Guide to R - Nathaniel Phillips](https://bookdown.org/ndphillips/YaRrr/)
+-   [R for Data Science - Hadley Wickham](https://r4ds.hadley.nz/)
+-   [Intro to R for Psychologists - Steven Nydick](http://swnydick.github.io/assets/reports/Introduction_to_R_Guide.pdf)
+-   [R Markdown: The Definitive Guide - Yihui Xie](https://bookdown.org/yihui/rmarkdown/)
+-   [Stack Overflow](https://stackoverflow.com/) is a popular Q&A forum. Whenever you run into an error in R, chances are that someone else has already run into that error and asked about it online.

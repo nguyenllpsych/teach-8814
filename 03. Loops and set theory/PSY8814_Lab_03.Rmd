@@ -1,0 +1,190 @@
+---
+title: "PSY 8814 - Lab 03: Loops and Set Theory"
+author: "Linh Nguyen"
+date: "2023-09-22"
+output: 
+  pdf_document:
+    toc: TRUE
+urlcolor: blue
+---
+
+\hfill\break
+  
+You can find the interactive webpage to edit and/or run the code yourself [here](https://nguyenllpsych.quarto.pub/psy8814-lab03/). Please wait for WEBR STATUS to be Ready.
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4)
+```
+
+```{r libraries}
+library(dplyr)    # for wrangling and pipe
+library(ggplot2)  # for plotting
+```
+
+# I. Loops
+
+## 1. Reproducible random state
+
+We have previously seen the `set.seed()` function in other lab notes. This function is specifically useful when we are doing anything *random* in R, such as random sampling from `rnorm()` or `sample()`. Computers are never truly random but are instead pseudo-random. This means that you can recreate a random event later on by setting the random *seed*. This is helpful for reproducibility. It ensures that you will all get the same results on your individual machines, and that I will get the same result whenever I rerun the code chunk. You can either set the seed at the beginning of a script file, beginning of a code chunk, or right before a random process.
+
+```{r seed}
+# Set seed
+set.seed(12345)
+
+# Randomize 1 through 10
+sample(x = 1:10, size = 10, replace = FALSE)
+```
+
+## 2. For-Loops
+
+Whenever you are repeating a process multiple times, you can use for-loops to simplify your code. 
+
+
+### Looping through numbers
+
+For example, you might want to simulate 100 vectors of random numbers, and for each vector compute the mean. I will then plot the histogram of all these 100 means.
+
+```{r loop-num-setup}
+# Set seed for reproducibility
+set.seed(8814)
+
+# number of trials
+n_trials <- 100
+
+# create an empty vector of means to be populated during the loops
+# numeric(n) creates a vector of n zeroes
+mean_vector <- numeric(n_trials)
+```
+
+```{r loop-num}
+# start for-loop
+# 1:n_trials is a sequence starting at 1 and ending at n_trials (100 here)
+for(i in 1:n_trials) {
+  
+  # draw 100000 random trials from 
+  # a uniform distribution
+  y <- runif(n = 100000, min = 0, max = 1)
+  
+  # Compute and save mean of y at position i in mean_vector
+  mean_vector[i] <- mean(y)
+}
+```
+
+```{r loop-num-plot}
+# view the first few values of vector
+mean_vector[1:10]
+
+# plot the vector
+hist(mean_vector, 
+     xlab = "Sampled Means",
+     main = "Histogram of 100 sampled means from uniform distributions")
+```
+
+### Looping through values
+
+You can loop through anything! You can loop through a vector of variable names, a list of data frames, a list of plots, etc.
+
+Here, I am showing an example of looping through a vector of variable names:
+
+```{r loop-char-setup}
+# remove scientific notation
+options(scipen = 999)
+
+# load state dataset from the built-in datasets package
+data(state)
+state <- state.x77[, 3:6]
+head(state) %>%
+  knitr::kable()
+
+# create a vector of variable names of the state dataset
+name_vector <- variable.names(state)
+name_vector
+```
+
+```{r loop-char}
+# create a for-loop to iterate through name_vector
+for (name in name_vector) {
+  
+  # first print out the name to double check
+  print(paste("The current variable is", name))
+  
+  # then create a summary of the variable in the state dataset
+  print(summary(state[, name]))
+  
+  # then create a histogram of the variable in the state dataset
+  hist(state[, name],
+       main = paste("Histogram of", name),
+       xlab = name)
+}
+```
+
+### Try it yourself!
+
+Draw 150 samples each with 5000 observations from a normal distribution with mean $\mu = 100$ and standard deviation $\sigma = 15$. For each sample, calculate and store the mean in a vector. At the end, take the mean of all the sample means and the standard deviation of all the sample means. Print these 2 results.
+
+```{r loop-practice}
+# insert your code here!
+
+```
+
+
+# II. Set Theory
+
+R has built-in functions for set theory operations. To demonstrate these functions, let's first create two sets, $A$ and $B$.
+
+```{r set-theory}
+# Let's create some sets!
+(A <- c("red", "orange", "green", "blue", "plum"))
+(B <- c("apple", "orange", "plum", "melon", "kiwi")) 
+```
+
+## 1. Union
+
+The `union()` function finds the union of the two sets, $A\cup B$, with all elements that are in either vector $A$ or $B$.
+
+```{r union}
+# Compute the union
+union(A, B)
+```
+
+## 2. Intersect
+
+Similarly, `intersect()` finds the intersection, $A\cap B$, which is all elements that are in *both* $A$ and $B$.
+
+```{r intersect}
+# Compute the intersection
+intersect(A, B)
+```
+
+Here we see that "orange" and "plum" are both colors and fruits!
+
+## 3. Set difference and complement
+
+The `setdiff()` function finds the set difference $A \setminus B$: elements of $A$ that are not also in $B$. 
+
+```{r setdiff}
+# Compute the difference of these sets
+# A - B =/= B - A
+setdiff(A, B)
+setdiff(B, A)
+```
+
+## 4. Inclusion
+
+We can use `is.element()` or `%in%` to check whether a single element belongs to a set. Here, we're asking R whether "apple" belong to our sets $A$ and $B$.
+
+```{r inclusion}
+# is apple in the color set?
+is.element("apple", A)
+
+# is apple in the fruit set?
+"apple" %in% B
+```
+
+
+# III. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman.
