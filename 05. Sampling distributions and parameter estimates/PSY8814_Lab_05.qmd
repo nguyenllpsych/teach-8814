@@ -1,0 +1,375 @@
+---
+title: "PSY 8814 - Lab 05: Sampling Distributions and Parameter Estimates"
+author: "Linh Nguyen"
+date: "2023-10-06"
+format: 
+  html:
+    toc: TRUE
+engine: knitr
+filters:
+  - webr
+webr:
+  packages: ['ggplot2']
+  channel-type: "post-message"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4)
+```
+
+```{webr library, message = FALSE, warning = FALSE}
+library(ggplot2)
+```
+
+# I. Sampling Distributions
+
+For the past few weeks, we have been talking about **probability distributions**, which generally correspond to a random variable. We have also seen *repeated sampling*, where we are drawing multiple samples from the same population. This leads to our next discussion on **sampling distributions**, which generally correspond to a statistic, such as the sample means.
+
+Let's assume we are interested in studying some particular population. It would be fantastic if we can record height for every single person in the population, but that is likely not feasible. Instead, we take a sample of $n$ observations from our population, analyze that data $\mathbf{x}$, and compute our test statistic as the sample mean, denoted $\bar{x}$.
+
+Now imagine we repeat this process $r$ times and collect $r$ samples, each of size $n$. For each of those samples, we compute the mean statistic $\bar{x}$. After the entire process, we end up with $r$ numbers of $\bar{x}$. The sampling distribution of $\bar{x}$ is the distribution of all $\bar{x}$ as the number of samples $r$ gets really really large, approaching infinity ($r \rightarrow \infty$).
+
+**Characteristics of $\bar{x}$**:
+
+- Mean of all sample means $\bar{x}$ = true population mean $\mu$.
+- Standard error $\sigma_{\bar{x}} = \sigma_x/\sqrt{n}$ = true population standard deviation $\sigma$ where $n$ is the sample size at each $r$ sample.
+- Because of these characteristics, we can use the mean and standard error from the sampling distribution as *estimators* of the true population values.
+
+## Example 1: Studying a normal population
+
+Let the population height of American adults be normally distributed with population values: $\mu = 66, \sigma = 3$, or $X \sim N(66, 9)$.
+
+Due to practical constraints, we cannot ask every single American adult how tall they are. Instead, we form a collaboration of 100 different research labs. Each lab goes out and finds 10 people and record their average height.
+
+```{webr normal-height-theory}
+# what does the population distribution look like?
+ggplot(data = data.frame(height = rnorm(n = 100000, mean = 66, sd = 3)),
+       aes(height)) +
+  # make a histogram in UMN maroon
+  geom_histogram(fill = "#7A0019",
+                 # adding this option just standardize the y-axis scaling
+                 aes(y = after_stat(density))) +
+  # add a density line in UMN gold and slightly thicker than normal
+  geom_density(color = "#FFCC33", linewidth = 1.5) +
+  # add some labels
+  labs(
+    title = "Normal distribution of height in inches"
+  ) +
+  theme_classic()
+```
+
+```{webr small-height-setup}
+# store sampling characteristics
+n <- 10    # each lab only needs to find 10 observations
+r <- 100   # there are 100 labs -- the sampling process is repeated 100 times
+mu <- 66   # population mean
+sigma <- 3 # population standard deviation
+
+# initialize a vector to store all sample averages
+#   of length 100 because there are 100 samples
+height_mean <- numeric(r)
+
+# set seed for reproducibility
+set.seed(8814)
+
+# let's get sampling!
+for(i in 1:r){
+  
+  # at each sample, generate n = 10 observations
+  current_sample <- rnorm(n = n, mean = mu, sd = sigma)
+  
+  # store the sample mean for each sample
+  height_mean[i] <- mean(current_sample)
+}
+```
+
+```{webr small-height-descr}
+# let's take a look at our sample means
+# mean of the 25th sample
+height_mean[25]
+
+# the mean of all sample means
+#   pretty close to population mu!
+mean(height_mean)
+
+# the standard error
+(se_height <- sd(height_mean))
+
+# the estimated population standard deviation
+#   pretty close to population sigma
+se_height * sqrt(n)
+```
+
+```{webr small-height-plot}
+# histogram of all sample means
+ggplot(data = data.frame(height_mean),
+       aes(height_mean)) +
+  # make a histogram in UMN maroon
+  geom_histogram(fill = "#7A0019",
+                 # adding this option just standardize the y-axis scaling
+                 aes(y = after_stat(density))) +
+  # add a density line in UMN gold and slightly thicker than normal
+  geom_density(color = "#FFCC33", linewidth = 1.5) +
+  # add some labels
+  labs(
+    title = "Distribution of the sample mean height drawn from a normal population",
+    subtitle = "for n = 10 observations across r = 100 samples"
+  ) +
+  theme_classic()
+```
+
+
+### Try it yourself!
+
+What if we increase the sample size that each lab collects to 1000? Generate the data for 100 labs, record the mean of each sample, then plot the histogram of all sample means. Calculate the mean and standard error.
+
+Set your seed to 8814.
+
+```{webr large-height}
+# insert your code here
+
+```
+
+## Example 2: Studying a uniform population
+
+Let the number of children for American adults be uniformly distributed with boundaries $a = 0, b = 10$, so that it is equally likely to have any number of children between 0 and 10. The population values are: 
+
+$$
+\mu = (a+b)/2 = (0+10)/2 = 5
+$$ 
+
+and 
+
+$$
+\sigma = \sqrt{(b – a)2 / 12} = \sqrt{(10-0)^2/12} = \sqrt{100/12} \approx 2.89
+$$
+
+Due to practical constraints, we cannot ask every single American adult how many children they have. Instead, we again form a huge collaboration of 500 different research labs. Each lab goes out and finds 50 people and record their average children count.
+
+```{webr uniform-children-theory}
+# what does the population distribution look like?
+ggplot(data = data.frame(children = runif(n = 10000, min = 0, max = 10)),
+       aes(children)) +
+  # make a histogram in UMN maroon
+  geom_histogram(fill = "#7A0019",
+                 # adding this option just standardize the y-axis scaling
+                 aes(y = after_stat(density))) +
+  # add a density line in UMN gold and slightly thicker than normal
+  geom_density(color = "#FFCC33", linewidth = 1.5) +
+  # add some labels
+  labs(
+    title = "Uniform population distribution of children count"
+  ) +
+  theme_classic()
+```
+
+```{webr uniform-children-setup}
+# store sampling characteristics
+n <- 50     # each lab only needs to find 50 observations
+r <- 500    # there are 500 labs -- the sampling process is repeated 500 times
+min_a <- 0  # lower boundary
+max_b <- 10 # upper boundary
+
+# initialize a vector to store all sample averages
+#   of length 500 because there are 500 samples
+children_mean <- numeric(r)
+
+# set seed for reproducibility
+set.seed(8814)
+
+# let's get sampling!
+for(i in 1:r){
+  
+  # at each sample, generate n = 50 observations
+  current_sample <- runif(n = n, min = min_a, max = max_b)
+  
+  # store the sample mean for each sample
+  children_mean[i] <- mean(current_sample)
+}
+```
+
+```{webr uniform-children-descr}
+# let's take a look at our sample means
+# mean of the 14th sample
+children_mean[14]
+
+# the mean of all sample means
+#   pretty close to population mu!
+mean(children_mean)
+
+# the standard error
+(se_children <- sd(children_mean))
+
+# the estimated population standard deviation
+#   pretty close to population sigma!
+se_children * sqrt(n)
+```
+
+# II. Parameter Estimates
+
+In the previous sections, I have been referring to values being *close* to the population values. We know the true population values in these exercises because we are simulating data assuming a specific distribution, but that of course is not how real research works. Although we often do not know the population values, the main idea is that we can still try to *estimate* them through (repeated) sampling.
+
+For each population value (such as $\mu$ and $\sigma$), there are **estimators** that can be calculated from our sample data. The value of these estimators are called **estimates**. So in the previous example, the mean across 500 sample means of children counts $\frac{\sum_{i=1}^{500}\bar{x}_i}{500}$ is the estimator of true average population children count, and $5.0017396$ is the estimate.
+
+Due to statistical theories proven by people much smarter than me, we know that this is a good estimator. But how do we actually judge how good an estimator is?
+
+## 1. Bias
+
+Let $\hat{\theta}$ be an estimator of the true $\theta$ value. The bias of an estimator is calculated as:
+
+$$
+\text{Bias}(\hat{\theta}, \theta) = \mathbb{E}(\hat{\theta}) - \theta
+$$
+
+In other words, the bias is the difference between the average of all estimates (expected value) and the real population parameter value
+
+If an estimator is *unbiased*, the expected value of the estimator $\hat{\theta}$ would equal the actual parameter $\theta$:
+
+$$
+\text{Bias}(\hat{\theta},\theta) = 0\\
+\mathbb{E}(\hat{\theta}) = \theta
+$$
+
+For example, let $x_1, x_2, ..., x_n$ be random observations from a population with mean $\mu$. The sample mean $\bar{x}$ is computed as:
+
+$$
+\bar{x} = \frac{\sum^n_{i=1}x_i}{n}
+$$
+
+Let's prove that $\bar{x}$ is an unbiased estimator of $\mu$:
+
+\begin{align*}
+ \mathbb{E}(\bar{x}) &= \mathbb{E}( \frac{\sum_{i=1}^{n}x_i}{n}) \\
+ &=\frac{1}{n} \mathbb{E}( \sum_{i=1}^{n}x_i) \\
+ &= \frac{1}{n} \left [ \mathbb{E}(x_1)+\mathbb{E}(x_2)+ \ldots + \mathbb{E}(x_n) \right ] \\
+ &=\frac{1}{n} \left [\mu+\mu+ \ldots + \mu \right ] = \frac{n\mu}{n} \\
+ \mathbb{E}&=\mu
+\end{align*}
+
+So $\bar{x}$ is an unbiased estimator for the population parameter $\mu$! Keep in mind however that this assumes repeated sampling infinity times. So in theory, as we keep repeating the sampling process, the idea is the average of all $\bar{x}$ will approach the true population value. However, infinite sampling is not possible (or cheap), so there likely will be errors.
+
+Let $x_1, x_2, ..., x_n$ be random realizations of $X \sim N(1,1)$ with $n = 100$. Let repeat the sampling process 10,000 times! At each repetition, let's calculate the estimator $\bar{x}$ as well as the *error*, or the difference between our estimator $\bar{x}$ and the true population parameter $\mu$.
+
+```{webr bias-data}
+# set seed
+set.seed(8814)
+
+# set parameter values
+mu <- 1
+sigma <- 1
+n <- 100
+r <- 10000
+
+# initialize a 10000 X 2 matrix to store sample means and error
+#   each row is the result for a repetition
+#   column 1: estimate = xbar
+#   column 2: error = xbar - mu
+sample_result <- matrix(nrow = r, ncol = 2)
+colnames(sample_result) <- c("Estimate", "Error")
+
+# let us simulate
+for(i in 1:r) {
+  
+  # generate 1 sample of size n = 100
+  current_sample <- rnorm(n = n, mean = mu, sd = sigma)
+  
+  # compute estimator xbar
+  xbar <- mean(current_sample)
+  
+  # store estimate and error in sample_result matrix
+  sample_result[i, "Estimate"] <- xbar
+  sample_result[i, "Error"] <- xbar - mu
+}
+```
+
+Let's look at some properties of our sampling distribution for $\bar{x}$:
+
+```{webr bias-descr}
+# take a look at the first few repetitions
+sample_result[c(1:5), ]
+
+# mean of sampling distribution
+#   very close to mu
+mean(sample_result[, "Estimate"])
+
+# standard error of the mean
+(se_sample <- sd(sample_result[, "Estimate"]))
+
+# estimate of population standard deviation
+#   very close to sigma
+se_sample * sqrt(n)
+
+# compute bias
+mean(sample_result[, "Error"])
+```
+
+### Try it yourself!
+
+Instead of the sample mean $\bar{x}$, let's use the sample **median** $m$ as our estimator for the population parameter $\mu$. So let's sample 10000 times from the $N(1,1)$ distribution, each time with 100 observations. At each repetition, store the median and the error (difference between median and $\mu$). At the end, compute the mean of the sample mean, the standard error, and the bias.
+
+```{webr bias-median}
+# insert your code here
+
+```
+
+## 2. Mean Squared Error
+
+If we have several candidates as potential estimators for a population value of interest, we need a way to compare them against one another. One straightforward way is to compare the error of these estimators. There are different ways to calculate errors, but one of the most popular approach is the mean squared error (MSE).
+
+$$
+\text{MSE}(\hat{\theta}, \theta) = \mathbb{E}[(\hat{\theta} - \theta)^2]
+$$
+
+Let us directly compare our two estimators for $\mu$: sample mean $\bar{x}$ and sample median $m$ by comparing their MSEs across 10000 repetitions each with 100 observations.
+
+```{webr mse}
+# set seed
+set.seed(8814)
+
+# set parameter values
+mu <- 1
+sigma <- 1
+n <- 100
+r <- 10000
+
+# initialize a 10000 X 2 matrix to MSE for xbar and median
+#   each row is the result for a repetition
+#   column 1: MSE for xbar
+#   column 2: MSE for median
+compare_results <- matrix(nrow = r, ncol = 2)
+colnames(compare_results) <- c("MSE-mean", "MSE-median")
+
+# let's simulate!
+for (i in 1:r) {
+  
+  # generate data
+  current_sample <- rnorm(n = n, mean = mu, sd = sigma)
+  
+  # compute xbar and median
+  xbar <- mean(current_sample)
+  mdn  <- median(current_sample)
+  
+  # calculate and store MSE for each estimator
+  compare_results[i, "MSE-mean"]   <- (xbar - mu)^2
+  compare_results[i, "MSE-median"] <- (mdn - mu)^2
+}
+
+# compare mse
+apply(X = compare_results,
+      MARGIN = 2, #column wise operation
+      FUN = mean)
+```
+
+We can see that the mean $\bar{x}$ performed better than the median $m$, with smaller estimated MSE across 10000 repetitions.
+
+One interesting property of the MSE is that it can be decomposed into Bias and Variance. This means that if an estimator is unbiased, its MSE is determined entirely by its variance. An intuitive reason for why low variance is good is because you don't just want your estimator to perform well in the long run after an infinite number of samples, you also want it not to be so far off each time (i.e., not vary too much from sample to sample).
+
+$$
+\text{MSE}(\hat{\theta}, \theta) = [\text{Bias}(\hat{\theta}, \theta)] ^2 + \text{Var}(\hat{\theta})
+$$
+
+# III. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman.
+- The interactive document is built using [quarto-webr](https://quarto-webr.thecoatlessprofessor.com/)
