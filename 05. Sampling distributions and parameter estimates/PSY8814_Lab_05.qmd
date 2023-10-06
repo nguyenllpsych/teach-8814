@@ -226,10 +226,10 @@ In other words, the bias is the difference between the average of all estimates 
 
 If an estimator is *unbiased*, the expected value of the estimator $\hat{\theta}$ would equal the actual parameter $\theta$:
 
-$$
+\begin{align*}
 \text{Bias}(\hat{\theta},\theta) = 0\\
 \mathbb{E}(\hat{\theta}) = \theta
-$$
+\end{align*}
 
 For example, let $x_1, x_2, ..., x_n$ be random observations from a population with mean $\mu$. The sample mean $\bar{x}$ is computed as:
 
@@ -306,7 +306,7 @@ mean(sample_result[, "Error"])
 
 ### Try it yourself!
 
-Instead of the sample mean $\bar{x}$, let's use the sample **median** $m$ as our estimator for the population parameter $\mu$. So let's sample 10000 times from the $N(1,1)$ distribution, each time with 100 observations. At each repetition, store the median and the error (difference between median and $\mu$). At the end, compute the mean of the sample mean, the standard error, and the bias.
+Instead of the sample mean $\bar{x}$, let's use the sample **median** $m$ as our estimator for the population parameter $\mu$. So let's sample 10000 times from the $N(1,1)$ distribution, each time with 100 observations. At each repetition, store the median and the error (difference between median and $\mu$). At the end, compute the mean of the sample median, the standard error, and the bias.
 
 ```{webr bias-median}
 # insert your code here
