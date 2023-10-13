@@ -333,12 +333,12 @@ sigma <- 1
 n <- 100
 r <- 10000
 
-# initialize a 10000 X 2 matrix to MSE for xbar and median
+# initialize a 10000 X 2 matrix to store errors for xbar and median
 #   each row is the result for a repetition
-#   column 1: MSE for xbar
-#   column 2: MSE for median
+#   column 1: squared errors for xbar
+#   column 2: squared errors for median
 compare_results <- matrix(nrow = r, ncol = 2)
-colnames(compare_results) <- c("MSE-mean", "MSE-median")
+colnames(compare_results) <- c("SError-mean", "SError-median")
 
 # let's simulate!
 for (i in 1:r) {
@@ -350,15 +350,19 @@ for (i in 1:r) {
   xbar <- mean(current_sample)
   mdn  <- median(current_sample)
   
-  # calculate and store MSE for each estimator
-  compare_results[i, "MSE-mean"]   <- (xbar - mu)^2
-  compare_results[i, "MSE-median"] <- (mdn - mu)^2
+  # calculate and store squared error for each estimator
+  compare_results[i, "SError-mean"]   <- (xbar - mu)^2
+  compare_results[i, "SError-median"] <- (mdn - mu)^2
 }
 
 # compare mse
 apply(X = compare_results,
       MARGIN = 2, #column wise operation
       FUN = mean)
+
+# you can also just take the mean of each column manually
+mean(compare_results[, "SError-mean"])
+mean(compare_results[, "SError-median"])
 ```
 
 We can see that the mean $\bar{x}$ performed better than the median $m$, with smaller estimated MSE across 10000 repetitions.

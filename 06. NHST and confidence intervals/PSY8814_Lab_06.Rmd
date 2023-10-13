@@ -1,0 +1,318 @@
+---
+title: "PSY 8814 - Lab 06: NHST and Confidence Intervals"
+author: "Linh Nguyen"
+date: "2023-10-13"
+output: 
+  pdf_document:
+    toc: TRUE
+urlcolor: blue
+---
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4)
+```
+
+```{r library, message = FALSE, warning = FALSE}
+library(psych)
+library(dplyr)
+```
+
+# I. NHST: $z$-tests
+
+## 1. One-sample $z$-test
+
+The first test you will learn for the null hypothesis significance testing (NHST) procedures is the one-sample $z$-test. This test is used to compare the population mean $\mu$ to some specific value when the population standard deviation is *known*. 
+
+Returning to our ACT example, we know from the National Center for Education Statistics that the population average standard deviation $\sigma = 5.8$. We don't know the population mean, but using evidence from our sample, we hypothesize that the population mean is greater than 21 ACT score. We assume that the population is normally distributed. The hypotheses are written below, with $H_0$ as the null hypothesis and $H_A$ as the alternative hypothesis
+
+$$
+H_0 : \mu \leq 21
+$$
+
+$$
+H_A: \mu > 21
+$$
+
+Every significance test needs a *test statistic*. For a one-sample $z$-test, the test statistic is a $z$-statistic. The formula for $z$ is:
+
+$$
+z = \frac{\bar{x} - \mu_0}{\sigma/\sqrt{n}}
+$$
+
+- $\bar{x}$ is the sample mean
+- $\mu_0 = 21$ is the value we want to compare against
+- $\sigma$ is the population standard deviation
+- $n$ is the sample size
+
+Let's compute this in R!
+
+```{r zstat}
+# calculate and store sample mean
+xbar <- mean(sat.act$ACT)
+
+# store sample size
+n <- length(sat.act$ACT)
+
+# store population standard deviation
+sigma <- 5.8
+
+# store mu_0 to compare against
+mu0 <- 21
+
+# that's all we need to calculate the test statistic!
+(z_stat <- (xbar - mu0)/(sigma/sqrt(n)))
+```
+
+If the null hypothesis is true, we know that the $z$-statistic follows a standard normal distribution, and we know exactly how to interpret this stand-alone value. In NHST framework, a common formal way to evaluate this is to compute a $p$-value, or the probability of obtaining values equally or more extreme than this $z$-statistic if the null hypothesis is true. Because our alternative hypothesis is one-sided: $H_A: \mu > 21$, we are looking at the upper tail of the standard normal distribution. In other words, we want to calculate $P(Z > 34.43)$:
+
+```{r pval}
+# compute p-value
+pnorm(q = z_stat, mean = 0, sd = 1, lower.tail = FALSE)
+```
+
+Okay, so we have a $p$-value, what decision do we make? Do we reject the null hypothesis and conclude that the population ACT score is higher than 21, or do we not have enough evidence? Often, we prefer a binary decision in addition to just using this numeric value. As a result, we need to know how small of a $p$-value is small enough to reject the null. We need a threshold. Here is where the magical $\alpha$ threshold of $0.05$ appears. In psychology and many other disciplines, we consider a test to be significant when the associated $p$-value is smaller than $0.05$. That clearly is the case here:
+
+```{r sig}
+# is p < 0.05?
+pnorm(q = z_stat, mean = 0, sd = 1, lower.tail = FALSE) < 0.05
+```
+
+Alternatively, we can compare our $z$-statistic to a $z$ *critical value*, or the $z$-score that correspond to exactly $0.05$. If our $z$-statistic is **more extreme** than the critical value, then our test is significant at the $\alpha$ level of $0.05$. Our decision using $p$-value and critical $z$-value will always be **identical**. If not, something has gone wrong with your computation.
+
+In our example, we are looking at only the upper tail of the distribution, because the alternative hypothesis is $H_A: \mu > 21$. As a result, we want to see if our $z$-statistic is *larger* than the critical $z$-value that is associated with the 95$^{th}$ percentile of the distribution.
+
+```{r zcrit}
+# set alpha threshold
+alpha <- 0.05
+
+# compute critical z-value using qnorm()
+(z_crit <- qnorm(1 - alpha, mean = 0, sd = 1))
+
+# is our z-statistic larger than the critical value?
+z_stat > z_crit
+```
+
+Yes! Our conclusion is to reject the null hypothesis that $\mu \leq 21$. We have enough evidence to support our claim that the average ACT score is greater than 21.
+
+## 2. Two-sided $z$-test
+
+How would our procedure change if we have a two-sided test? In that case, our research question would be to test whether population ACT scores are *different from* 21, with the hypotheses:
+
+$$
+H_0: \mu = 21
+$$
+
+$$
+H_A: \mu \neq 21
+$$
+
+The $z$-statistic is the same, $z = 34.43$. But our $p$-value and critical $z$-value computations would change, because we are looking at different parts of the distribution. For $p$-value, we now want $P(|Z| \geq |z|)$, which is the same as $2 \times P(Z\geq |z|)$.
+
+```{r pval2}
+# p-value for a two-sided test
+2 * pnorm(abs(z_stat), lower.tail = FALSE)
+```
+
+The critical region is no longer just those greater than the $1 - \alpha = 95^{th}$ percentile, but those regions at both extremes of the distribution. Our critical region now is denoted by the $\alpha/2$ and $1 - (\alpha/2)$ quantiles of the standard normal distribution.
+
+```{r zcrit2}
+# compute critical values for two-sided test
+(z_crit <- qnorm(c(alpha/2, 1 - alpha/2), mean = 0, sd = 1))
+
+# is our z-statistic more extreme than these critical values?
+(z_stat < z_crit[1]) | # is z-stat smaller than the lower critical value?
+  (z_stat > z_crit[2]) # is z-stat larger than the upper critical value?
+```
+
+## Try it yourself! Visualize one- and two-sided tests
+
+Generate a standard normal distribution with 100000 observations. Make two density plots of these distributions using `geom_density()`. For the first plot, add a vertical maroon (#7A0019) line at the standard normal $95^{th}$ percentile. For the second plot, add 2 vertical gold (#FFCC33) lines at the standard normal $2.5^{th}$ and $97.5^{th}$ percentiles.
+
+```{r visual}
+# insert your code here
+```
+
+
+# II. Confidence Intervals
+
+Conceptually, confidence intervals provide a range of possible values for a population parameter with a degree of confidence associated with it.
+
+Technically, a 95\% confidence interval means that, if you were to repeat the sampling process an infinite number of times and compute the confidence interval at each repetition, 95\% of the time, the computed range would include the true population value. For a single repetition or a single sample, the confidence interval either includes the true value or it does not. However, in the long run, it should work roughly 95\% of the time.
+
+## 1. Normal confidence intervals
+
+The normal-based confidence interval CI is constructed as:
+
+$$
+\bar{x} \pm z_{(1+\gamma)/2}\Big( \frac{\sigma}{\sqrt{n}} \Big)
+$$
+
+- $\bar{x}$ is the sample mean
+- $z_{(1+\gamma)/2}$ is the $(1+\gamma)/2$ quantile of the standard normal distribution, also called the **critical value**
+- $\gamma$ is the confidence level in decimal (e.g., .95 for 95\% CI)
+- $\sigma$ is the population standard deviation
+- $n$ is the sample size
+
+Let's compute this value in the `sat.act` dataset from the `{psych}` package. We are interested in ACT scores. Based on 2019 data from the National Center for Education Statistics, we know that the population standard deviation for ACT scores $\sigma = 5.8$. Our goal is to use our sample to construct a confidence interval for the population mean $\mu$.
+
+```{r data}
+# load dataset
+data(sat.act)
+
+# dimension of the data in nrow, ncol
+dim(sat.act)
+
+# check the first 6 observations
+head(sat.act)
+
+# check for missing values in the variable of interest
+sum(is.na(sat.act$ACT))
+
+# sample mean as an estimate for the population mean
+(meanACT <- mean(sat.act$ACT))
+```
+
+Let's construct the 95\% confidence interval using the provided information.
+
+```{r ci}
+# store gamma: confidence level
+gamma <- 0.95
+
+# store population sigma
+sigma <- 5.8
+
+# store sample size
+n <- length(sat.act$ACT)
+
+# calculate and store the critical value
+(crit_val <- qnorm((1 + gamma)/2))
+
+# that's all we need to calculate CI
+CI_lower <- meanACT - (crit_val * (sigma/sqrt(n)))
+CI_upper <- meanACT + (crit_val * (sigma/sqrt(n)))
+print(c(CI_lower, CI_upper))
+```
+
+From this information, we know that the 95\% confidence interval for $\mu$ is $[28.12, 28.98]$
+
+This means that if we collect many samples of ACT scores, and calculate the confidence interval following this same formula at each time, roughly 95\% of those confidence intervals will include the real population mean $\mu$.
+
+## 2. Factors influencing confidence intervals
+
+An important feature of the confidence interval is its width. A very wide confidence interval might not be super useful. For instance, I can say that my confidence interval for every scenario is $(-\infty, +\infty)$, which will definitely include the population value, but ultimately a useless tool.
+
+The width is influenced by two main factors, the confidence level $\gamma$ and the sample size $n$.
+
+### Confidence level
+
+Let's compute several different confidence intervals of our ACT scores using confidence levels $\gamma = \{0.85, 0.90, 0.95, 0.99\}$
+
+```{r ci-gamma}
+# store sample size
+n <- length(sat.act$ACT)
+
+# store population sigma
+sigma <- 5.8
+
+# store mean score
+meanACT <- mean(sat.act$ACT)
+
+# set gamma values
+gamma_list <- c(.85, .90, .95, .99)
+
+# create a matrix for store the lower and upper bound and width for each CI
+CI_results <- matrix(ncol = 3, # lower, upper, and width
+                     nrow = length(gamma_list)) # 4 gamma values
+
+# loop through gamma list to construct each CI
+for(i in 1:length(gamma_list)){
+  
+  # compute critical value
+  crit_val <- qnorm((1 + gamma_list[i])/2)
+  
+  # compute lower bound for CI
+  #   and store in first column of CI_results
+  CI_results[i, 1] <- meanACT - (crit_val * (sigma/sqrt(n)))
+  
+  # compute upper bound for CI
+  #   and store in second column of CI_results
+  CI_results[i, 2] <- meanACT + (crit_val * (sigma/sqrt(n)))
+  
+  # compute width of CI as upper bound - lower bound
+  #   and store in third column of CI_results
+  CI_results[i, 3] <- CI_results[i, 2] - CI_results[i, 1]
+}
+
+# compare widths across gammas
+CI_results <- cbind(gamma_list, CI_results)
+colnames(CI_results) = c("gamma", "lower", "upper", "width")
+round(CI_results, 3) %>%
+  knitr::kable() %>%
+  kableExtra::kable_styling()
+```
+
+Confidence interval widths increase as $\gamma$ increases. Makes sense! A wider confidence interval would offer more certainty.
+
+### Sample size
+
+Let's compute several different confidence intervals, of our sample mean of ACT scores, all with 95\% confidence level, but pretending that the sample size was $n = \{100, 250, 500\}$.
+
+```{r ci-n}
+# store gamma
+gamma <- 0.95
+
+# store population sigma
+sigma <- 5.8
+
+# set list of sample sizes
+n_list <- c(100, 250, 500)
+
+# create a matrix for store the lower and upper bound and width for each CI
+CI_results <- matrix(ncol = 3, # lower, upper, and width
+                     nrow = length(n_list)) # 3 gamma values
+
+# loop through gamma list to construct each CI
+for(i in 1:length(n_list)){
+  
+  # compute critical value
+  crit_val <- qnorm((1 + gamma)/2)
+  
+  # compute lower bound for CI
+  #   and store in first column of CI_results
+  CI_results[i, 1] <- meanACT - (crit_val * (sigma/sqrt(n_list[i])))
+  
+  # compute upper bound for CI
+  #   and store in second column of CI_results
+  CI_results[i, 2] <- meanACT + (crit_val * (sigma/sqrt(n_list[i])))
+  
+  # compute width of CI as upper bound - lower bound
+  #   and store in third column of CI_results
+  CI_results[i, 3] <- CI_results[i, 2] - CI_results[i, 1]
+}
+
+# compare widths across gammas
+CI_results <- cbind(n_list, CI_results)
+colnames(CI_results) = c("sample size", "lower", "upper", "width")
+round(CI_results, 3) %>%
+  knitr::kable() %>%
+  kableExtra::kable_styling()
+```
+
+Confidence interval widths decrease as sample size $n$ increases. Makes sense! A confidence interval constructed from a larger sample would offer more precision.
+
+## 3. Bootstrap confidence intervals
+
+Most of our discussions on confidence interval calculations assume that the variable is normally distributed. This is not always the case. If we do not want to rely on the normality assumption, or rely on any distribution for that matter, we can instead use a **non-parametric** approach.
+
+We will discuss non-parametric approaches to hypothesis testing more in-depth in the future. Very briefly, **bootstrapping** is a non-parametric approach to compute the confidence interval without using any distribution function, e.g., `qnorm()`. The bootstrapping procedure involves random repeated sampling from your sample with replacement, thus creating multiple bootstrapped datasets. This becomes your *empirical distribution*.
+
+To implement bootstrapping in R, you can use for loops with the `sample()` function or use other packages such as `{np.test}` with the function `np.boot()` (Helwig, 2021).
+
+# III. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman.
+- The interactive document is built using [quarto-webr](https://quarto-webr.thecoatlessprofessor.com/)
+- Helwig, N. E. (2021). `nptest`: Nonparametric bootstrap and permutation tests. R package version 1.0-3.
