@@ -1,0 +1,401 @@
+---
+title: "PSY 8814 - Lab 09: One-sample and Independent-sample t-tests"
+author: "Linh Nguyen"
+date: "2023-11-03"
+output: 
+  pdf_document:
+    toc: TRUE
+urlcolor: blue
+---
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4)
+```
+
+```{r library, message = FALSE, warning = FALSE}
+library(dplyr)      # for general wrangling and pipe
+library(tidyr)      # for pivot_longer
+library(ggplot2)    # for plotting
+library(kableExtra) # for professional tables
+library(nptest)     # for non-parametric tests
+```
+
+
+# I. $t$-Distributions
+
+## 1. Distribution functions 
+
+Just like how $z$-statistics used in $z$-tests follow the standard normal distribution, $t$-statistics which are used in $t$-tests follow the $t$-distributions! This means we can use the same sets of familiar functions that come with the distribution in R:
+
+- `dt()`: density of a $t$-distribution at a specific value
+- `pt()`: cumulative probability (CDF) at a given value, with the default `lower.tail = TRUE` giving $P(X \leq x)$
+- `qt()`: quantile/value that is associated with a specific cumulative probability
+- `rt()`: random drawings from a $t$-distribution
+
+There are technically many $t$-distributions that all belong to the $t$ family. Changing the *degree of freedom* would result in a different $t$-distribution. You can think of this as the many normal distributions with different location and scale when you change the mean $\mu$ and standard deviation $\sigma$. Interestingly, as the degree of freedom approaches infinity, $df \rightarrow \infty$, the $t$-distribution would approximate the standard normal distribution $N(0, 1)$.
+
+When we conduct a $z$-test, the critical $z$-value is computed using the quantile function of the standard normal distribution `qnorm()` and the $p$-value was obtained using the cumulative probability function of the standard normal distribution evaluated at the $z$-statistic `pnorm()`. The procedure is almost identical for $t$-test, but you need to specify the additional *parameter* for the degree of freedom.
+
+## 2. Distribution visualizations
+
+The $t$-distributions look quite similar to the normal distribution (and is in fact connected to it as $df \rightarrow \infty$).
+
+```{r t-viz}
+# Sequence of realizations and corresponding densities
+df <- data.frame(x = seq(-3, 3, length.out = 1000)) %>%
+          mutate(
+            # t-distribution with 1 degree of freedom
+            DF1 = dt(x, df = 1),
+            # t-distribution with 5 degrees of freedom
+            DF5 = dt(x, df = 5),
+            # t-distribution with 100 degrees of freedom
+            DF100 = dt(x, df = 100),
+            # standard normal distribution
+            Normal = dnorm(x, mean = 0, sd = 1))
+
+# Reshape long and create line plot
+df %>% pivot_longer(cols = 2:5,
+                    names_to = "Dist",
+                    values_to = "Y") %>%
+  mutate(Dist = factor(Dist, levels = c("DF1", "DF5", "DF100", "Normal"),
+                       labels = c("df = 1", "df = 5", "df = 100", "Normal"))) %>%
+  ggplot(aes(x = x, y = Y, color = Dist, linetype = Dist)) +
+  geom_line() +
+  labs(
+    title = "Comparing the t-distributions and standard normal distribution",
+    x = "x",
+    y = "Density"
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_classic()
+```
+
+# II. One-sample $t$-test
+
+When we conducted the one-sample $z$-test, we made a big assumption: that we know the *true* population standard deviation $\sigma$. This is usually not the case. Unfortunately, we need $\sigma$ to compute a $z$-statistic. However, if we only have the sample standard deviation, we can substitute that in the formula to compute a $t$-statistic instead. This is a one-sample $t$-test, which is used to test the mean against some other value. Some example use-cases include testing whether the population mean that our sample is drawn from is some specific values or different from some other population (e.g., Do graduate students spend more than 10 hours a week writing? Are the rats who took this new medicine smarter than the general population of rats?)
+
+For this example, let's use the `precip` dataset from the R `{datasets}` package, which is a numeric vector of the average amount of annual precipitation (rainfall) in inches for each of 68 cities. We are curious to see if rainfall is different from 20 inches.
+
+```{r precip-data}
+# load and look at data
+data(precip)
+precip
+precip_df <- data.frame(city = names(precip)[-c(24, 50)], 
+                        rainfall = precip[-c(24, 50)])
+
+# descriptives of rainfall
+summary(precip_df$rainfall)
+
+# store mean
+xbar <- round(mean(precip_df$rainfall), 3)
+
+# plot data for fun
+ggplot(data = precip_df %>%
+         arrange(rainfall) %>%
+         mutate(city = factor(city, levels = city)),
+       aes(x = city, y = rainfall)) +
+  geom_bar(stat = "identity", fill = "lavender") +
+  geom_hline(yintercept = xbar,
+             color = "darkblue",
+             size = 1) +
+  annotate("text", y = xbar + 5, x = 20,
+           label = paste("mean rainfall =", xbar, "inches")) +
+  labs(x = NULL,
+       y = "rainfall in inches",
+       title = "Bar plot of annual precipitation across 68 US cities") +
+  theme_classic() +
+  theme(axis.text.x = element_blank())
+```
+
+Our hypotheses are as follows:
+
+$$
+H_0: \mu = 20
+$$
+
+$$
+H_A: \mu \neq 20
+$$
+
+This is a two-sided test because there is no implied direction (i.e., greater than or less than).
+
+## 1. Test normality assumption
+
+The first step is checking our assumptions. Most statistical tests come with certain assumptions. Here, let's check to see if our data are approximately normally distributed.
+
+```{r qq}
+# qqplot
+qqnorm(precip_df$rainfall)
+qqline(precip_df$rainfall)
+```
+
+Doesn't look too hot! We can also do a Shapiro-Wilk test:
+
+```{r sw}
+# shapiro wilk test
+shapiro.test(precip_df$rainfall)
+```
+
+Heh, the Shapiro-Wilk normality test statistic is $W = 0.967, p = .067$. The $p$-value is just higher than our typical $alpha$ level of 0.05, so we fail to reject the hypothesis that our data are sampled from a normal distribution. In other words, the data do not significantly deviate from a normal distribution.
+
+## 2. Compute the $t$-statistic
+
+The formula for the $t$-statistic is:
+
+$$
+t_\text{statistic} = \frac{\bar{x} - \mu_0}{s/\sqrt(n)}
+$$
+where $\bar{x}$ is the sample mean, $\mu_0$ is the null mean, $s$ is the sample standard deviation, and $n$ is the sample size. Let's find all these values to plug in the equation. This is extremely similar to the formula for $z$-statistic, but we have substituted the unknown population standard deviation $\sigma$ with the sample standard deviation $s$.
+
+```{r t-stat}
+# store or compute different components of the formula
+mu0  <- 20
+n    <- length(precip_df$rainfall)
+xbar <- mean(precip_df$rainfall)
+sval <- sd(precip_df$rainfall)
+
+# plug in to solve for t
+(t_stat <- (xbar - mu0)/(sval/sqrt(n)))
+```
+
+## 3. Compute $p$-value and critical $t$-value
+
+For a two-tailed test, our $p$-value is computed as $2\times P(T > |t_\text{statistic}|)$. Similar to $z$-test, we can use the cumulative probability function to solve for $p$-value: `pt()`. Remember that we have to provide the degree of freedom, which for this test is $df = n-1 = 68$.
+
+```{r p-val}
+# p-value for two tailed tests
+(p_val <- 2 * pt(abs(t_stat), df = n - 1, lower.tail = FALSE))
+```
+
+For a two-tailed test, similar to a $z$-test, there are two critical $t$-values, one at each tail, which correspond to the value with the cumulative probability of $\alpha/2$ and $1-\alpha/2$, or $2.5^{th}$ and $97.5^{th}$ percentiles for $\alpha = 0.05$. Because we are solving for a value, we can use the quantile function: `qt()`.
+
+```{r t-crit}
+# critical t-values at alpha of 0.05
+alpha <- 0.05
+(t_crit <- qt(c(alpha/2, 1-alpha/2), df = n - 1))
+```
+
+## 4. Make a decision
+
+With all the components computed, it's time to make a decision. Do we reject or fail to reject the null hypothesis? What can we conclude about US precipitation?
+
+There are 2 ways to make this decision, and they should *always* agree:
+
+### Compare $p$-value to $\alpha$
+
+Our $p$-value is smaller than the $\alpha$ threshold: `r options(scipen = 999); p_val; options(scipen = 0)` $< 0.05$. So we reject the null hypothesis and conclude that rainfall in the US is different from 20 inches. In our case, it is higher than 20 inches, with a sample mean of `r round(xbar, 3)` inches.
+
+### Compare $t$-statistic to critical $t$-value
+
+Our $t$-statistic is more extreme than the critical $t$-values. This means that it is either smaller than the lower-tail critical $t$-value, or larger than the upper-tail critical $t$-value. In our case, it is higher than the upper critical value: `r round(t_stat, 3)` $>$ `r round(t_crit[2], 3)`. So we reject the null hypothesis and conclude that rainfall in the US is different from 20 inches.
+
+## 5. Confidence interval
+
+Our sample mean of $\bar{x} =$ `r round(xbar, 3)` inches is our estimate of the population average rainfall, but it is just one value. A more informative estimate would include the confidence interval around this point estimate. Let's compute a $95\%$ confidence interval to correspond to our $\alpha$ level.
+
+```{r ci}
+# t quantile for confidence interval
+t_val <- qt(1 - (alpha/2), df = n - 1)
+
+# ci
+xbar + c(-1, 1) * t_val * (sval/sqrt(n))
+```
+
+# III. Independent samples $t$-test
+
+## 1. Construct the hypotheses
+
+In many cases, we want to make an inference about the relationship between the means of two independent samples of data (e.g., Do graduate students and undergraduate students differ in average sleep time?). To conduct an independent-samples $t$-test, we assume that our 2 samples each come from a normal distribution (albeit different ones). Another assumption is for the population variance: the homogeneity of variance assumption, that the 2 populations have the same variance $\sigma_1 = \sigma_2$
+
+The independent-samples $t$-test can easily be converted back to a one-sample $t$-test: instead of testing whether a specific mean is some value, we test whether the *difference* in mean is different from zero. If it is, then the two means differ from one another!
+
+Going back to our precipitation example, let's say that half of the data come from a coastal city, whereas the remaining half come from an inland city. We want to see if their means differ from one another.
+
+```{r dat-group}
+# add a grouping variable
+set.seed(8814)
+precip_df$loc <- sample(x = rep(c("coast", "land"), each = n/2),
+                        size = n)
+```
+
+
+The null hypothesis is:
+
+$$ H_0: \mu_\text{coast} - \mu_\text{land} = 0 \text{ or } \mu_\text{coast} = \mu_\text{land} $$
+The alternative hypothesis is:
+
+$$H_A: \mu_\text{coast} - \mu_\text{land} \neq 0 \text{ or } \mu_\text{coast} \neq \mu_\text{land} $$
+## 2. Test homoskedasticity assumption
+
+We can formally test the assumption of equal variances using the Levene's test, which is available in the `{car}` package with the `leveneTest()` function. The null hypothesis of this test is that the two group variances are equal, so we do NOT want to reject the null hypothesis if we want the homoskedasticity assumption to hold.
+
+```{r homoskedas}
+# levene's test
+car::leveneTest(y = rainfall ~ loc, center = mean,
+                 data = precip_df)
+```
+
+Alternatively, we can use the Brown-Forsythe method, by specifying `center = median`:
+
+```{r homoskedas-bf}
+# levene's test with brown-forsythe method
+car::leveneTest(y = rainfall ~ loc, center = median,
+                 data = precip_df)
+```
+
+The $p$-values for both approaches are well above $\alpha$ of 0.05, so we fail to reject the null hypothesis and conclude that the 2 group variances are indeed equal. Our assumption holds! Keep in mind, however, that with equal sample sizes like our case here, the independent-samples $t$-test is quite robust to violations of this assumption. Nonetheless, we're thorough and double-checked.
+
+## 3. Compute the $t$-statistic
+
+We can obtain important values from the data set. The `kable()` function in the `{knitr}` package is a great way to create professional-looking tables. I like to also load the `{kableExtra}` package as this adds additional table design possibilities!
+
+```{r descr}
+# create table with grouped descriptives
+precip_df %>%
+  group_by(loc) %>%
+  summarise("Mean" = mean(rainfall),
+            "Var"  = var(rainfall),
+            "N"    = length(rainfall)) %>%
+  kable(booktabs = T,     # Adds nice lines above and below table
+        format = "latex", # use format = "html" when knitting to HTML
+        col.names = c("Location", "Mean", "Variance", "N"),
+        caption = "Descriptive statistics of coastal and inland rainfall") %>%
+  kable_styling(latex_options = "hold_position") # so it doesn't float away...
+```
+
+Next, let's compute the pooled standard deviation:
+
+$$ s_\text{pooled} = \sqrt{\frac{((n_1 - 1) \times s^2_1) + ((n_2 - 1) \times s^2_2)}{n_1 + n_2 - 2}} = \sqrt{\frac{33 \times 221.9 + 33\times169.1}{67}} = 13.88$$
+
+$$ t_\text{statistic} = \frac{( \bar{x}_1 - \bar{x}_2) - \mu_0}{s_\text{pooled}\times\sqrt{1/n_1 + 1/n_2}} = \frac{35.25 - 34.27 - 0}{13.88 \times \sqrt{1/34 + 1/34}} = 0.29$$
+
+Or let's plug it in to the R calculator, which is always better to preserve decimal accuracy and avoid errors
+
+```{r s-pooled}
+# pull out the 2 vectors of data for easier viewing
+coast <- precip_df[precip_df$loc == "coast", "rainfall"]
+land  <- precip_df[precip_df$loc == "land", "rainfall"]
+
+# compute pooled standard deviation
+s_pooled <- sqrt(
+  ((length(coast) - 1) * var(coast) + (length(land) - 1) * var(land)) /
+    (length(coast) + length(land) - 2)
+  )
+s_pooled
+
+# compute t-statistic
+t_stat <- (mean(coast) - mean(land) - 0) / 
+  (s_pooled * sqrt((1/length(coast)) + 1/length(land)))
+t_stat
+```
+
+## 4. Compute $p$-value and critical $t$-value
+
+*Important*: Unlike the degree of freedom for the one-sample $t$-test, which was $df = n - 1$, the degree of freedom for the independent-samples $t$-test is $df = n_1 + n_2 - 2$. 
+
+```{r p-val-2}
+df_independent <- length(land) + length(coast) - 2
+
+# compute two-sided p-value
+(p_val <- 2 * pt(t_stat, df = df_independent, lower.tail = FALSE))
+```
+
+```{r t-crit-2}
+# critical t-values
+alpha <- 0.05
+(t_crit <- qt(c(alpha/2, 1 - alpha/2), df = df_independent))
+```
+
+## 5. Make a decision
+
+### Compare $p$-value to $\alpha$
+
+Our $p$-value is greater than the $\alpha$ threshold: `r options(scipen = 999); p_val; options(scipen = 0)` $> 0.05$. So we fail to reject the null hypothesis and conclude that rainfall is not different in coastal versus inland cities.
+
+### Compare $t$-statistic to critical $t$-value
+
+Our $t$-statistic is not more extreme than the critical $t$-values. This means that it between the  lower-tail and upper-tail critical values: `r round(t_crit[1], 3)` $<$ `r round(t_stat, 3)` $<$ `r round(t_crit[2], 3)`. So we fail to reject the null hypothesis and conclude that rainfall does not differ between coastal and inland cities.
+
+# IV. R Functions
+
+The process above is technically *by-hand*, because you have to be mindful of the formula and compute each component of it. There is a much easier way to do this, using built-in function `t.test()`. Although we use the same function for all types of $t$-tests, we need to specify the arguments differently for a one-sample or independent-sample test.
+
+## 1. One-sample $t$-test with `t.test()`
+
+To run a one-sample $t$-test, you need to specify $\mu_0$, the null mean that you want to compare your mean against. Back to our one-sample rainfall example above, as a reminder, our null hypothesis is $H_0: \mu = 20$ or that the average rainfall is 20 inches.
+
+```{r t.test-one}
+# run one-sample t-test
+t.test(x = precip_df$rainfall,
+       mu = 20)
+```
+
+This "one quick trick" computes all the different values that you might need for a one-sample $t$-test. As we can see, it is identical to what we computed manually before.
+
+## 2. Independent-samples $t$-test with `t.test()`
+
+To run an independent-samples $t$-test, you need to specify either both vectors of data or the grouping vector, depending on your data *structure*. You also need to specify whether or not your data are *paired* or independent, and whether the homoskedasticity assumption holds.
+
+```{r t.test-two}
+# run independent-sample t-test with 2 vectors
+t.test(x = coast,
+       y = land,
+       paired = FALSE,
+       var.equal = TRUE)
+
+# run independent-sample t-test with a grouping variable
+t.test(rainfall ~ loc,
+       data = precip_df,
+       paired = FALSE,
+       var.equal = TRUE)
+```
+
+## 3. Assumption violations
+
+If the homoscedascity assumption is violated, we can apply the Welch-Satterthwaite correction by setting `var.equal = FALSE`.
+
+```{r vio-homoske}
+# what if the homoskedasticity assumption is violated?
+t.test(rainfall ~ loc,
+       data = precip_df,
+       paired = FALSE,
+       var.equal = FALSE)
+```
+
+If the normality assumption is violated, we can use a nonparametric test. For example, the `{np.test}` package has a function `np.loc.test()` for testing means with one or two samples. This test uses random sampling, so you should set a seed for reproducibility. The syntax is strikingly similar to `t.test()`.
+
+```{r vio-normal}
+# set seed
+set.seed(8814)
+
+# one-sample
+nptest::np.loc.test(x = precip_df$rainfall,
+                    mu = 20)
+
+# independent-sample
+nptest::np.loc.test(x = coast,
+                    y = land,
+                    paired = FALSE,
+                    var.equal = TRUE,
+                    alternative = "two.sided")
+
+# independent-sample with homoskedasticity violation
+nptest::np.loc.test(x = coast,
+                    y = land,
+                    paired = FALSE,
+                    var.equal = FALSE,
+                    alternative = "two.sided")
+```
+
+# V. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman
+- Fox, J., & Weisberg, S. (2019). *An R companion to applied regression.* Sage. 
+- Helwig, N. E. (2021). nptest: Nonparametric bootstrap and permutation tests. R package version 1.0-3. 
+- Wickham, H., François, R., Henry, L., & Müller, K. (2021). dplyr: A grammar of data manipulation. R package version 1.0.7
+- Xie, Y. (2015). *Dynamic documents with R and knitr*. Chapman and Hall.
+- Xie, Y. (2021). knitr: A general-purpose package for dynamic report generation in R. R package version 1.33
+- Zhu, H. (2021). kableExtra: Construct complex table with 'kable' and pipe syntax. R package version 1.3.4

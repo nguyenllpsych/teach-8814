@@ -1,0 +1,266 @@
+---
+title: "PSY 8814 - Lab 07: Power and Effect Size"
+author: "Linh Nguyen"
+date: "2023-10-20"
+output: 
+  pdf_document:
+    toc: TRUE
+urlcolor: blue
+---
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.height = 4)
+```
+
+```{r library, message = FALSE, warning = FALSE}
+```
+
+
+# I. Compute Power "Manually"
+
+Power is defined as the probability of correctly rejecting the null hypothesis when the null hypothesis is false. We generally want a test that maximizes power while maintaining a set rate of Type I error or false positive error (also known as $\alpha$). As we've discussed in lecture, many factors influence power, including $\alpha$, sample size, population standard deviation $\sigma$, and the true effect size. To calculate and plan for power analyses, we have to make certain assumptions about our population distributions. For example, we have to select plausible parameters for our null and alternative distributions
+
+## 1. One-sided test
+
+Here are the steps to calculate power for a one-sided test:
+
+a. Find the parameters for the null distribution: mean and standard deviation
+b. Find the critical value for the rejection region under the null hypothesis
+c. Identify the effect size
+d. Compute power as the probability of getting a sample mean more extreme than that critical value under the alternative distribution 
+
+For example, we're conducting a study to examine the TV watching habits of graduate students. Prior research tells us that the number of hours students watch per week follows a normal distribution with $\sigma = 6$. After surveying 50 students, we want to test the following hypotheses:
+
+$$ 
+H_0: \mu \leq 20 \\
+H_A: \mu > 20 
+$$
+
+Let's go through all these steps!
+
+### a. Null distribution parameters
+
+Given these hypotheses, the null distribution has a mean $\mu = 20$ and $\sigma = 6/\sqrt{50}$. Why are these values the parameters of the null distribution?
+
+### b. Critical value
+
+We need to find the critical value for our rejection region under the null hypothesis, denoted here as $\bar{x}_\text{critical}$. We saw in lecture that, for a one-sided test with $\alpha = 0.05$, we could calculate this value as:
+
+\begin{align*} 
+         z = 1.644854   &= \frac{\bar{x}-20}{6/\sqrt{50}} \\
+             1.395705   &= \bar{x}-20 \\
+\bar{x}_\text{critical} &= 21.395705
+\end{align*}
+
+Alternatively, and more programmatically, we can use the `qnorm()` function to find any $1-\alpha$ quantile of the null distribution (which in this case has mean $\mu = 20$ and $\sigma=6/\sqrt{50}$).
+
+```{r crit}
+# Set alpha
+alpha <- 0.05
+
+# Critical value for upper-tailed test
+(xcrit <- qnorm(p = 1 - alpha, mean = 20, sd = 6/sqrt(50)))
+```
+
+### c. Effect size
+
+Although we had an inexact hypothesis above, we need to specify a specific mean for the alternative hypothesis to compute power, denoted here as $\mu_0$. This $\mu_0$ is related to the effect size/true difference in means.
+
+What if we want to compute the power when $\mu_0 = 22$? In other words, what is the power of our test to detect a mean of at least 22? This corresponds to a difference in means (sometimes referred to as $\delta$) of $22 - 20 = 2$, or a Cohen's $d$ of 
+
+
+$$
+d = \frac{22-20}{6}=\frac{2}{6} = 0.33
+$$
+
+```{r plot-dist}
+# Plot distributions
+x <- seq(15, 25, by = 0.1)
+y0 <- dnorm(x, mean = 20, sd = 6/sqrt(50))
+yA <- dnorm(x, mean = 22, sd = 6/sqrt(50))
+plot(x, y0, type = "l", col = "blue",
+     xlab = expression(bar(x)), ylab = "Density")
+lines(x, yA, col = "orange")
+abline(v = xcrit, lty = "dashed")
+legend("topleft",
+       legend = c("Null", "Alternative"),
+       lty = c("solid", "solid"),
+       col = c("blue", "orange"))
+```
+
+### d. Compute power
+
+Now with all the necessary pieces, we'll use `pnorm()` to compute the probability of getting a sample mean greater than the critical value $\bar{x}_\text{critical}$ under the alternative hypothesis, which here has a mean of 22 and standard deviation of $\sigma = 6/\sqrt{50}$. Why are these values the parameters of the alternative distribution? 
+
+Because we have a one-sided/upper-tail test, we then find the probability of finding a value *greater* than the critical value $\bar{x}_\text{critical}$.
+
+```{r power}
+# compute power
+pnorm(xcrit, mean = 22, sd = 6/sqrt(50), lower.tail = FALSE)
+```
+
+## 2. Two-sided test
+
+Let's go back to the beginning and re-specify our hypotheses, still with an $\alpha$ level of 0.05. Rather than a one-sided test, we want to test
+
+$$
+H_0: \mu = 20 \\
+H_A: \mu \neq 20
+$$
+
+### a. Null distribution parameters
+
+This is exactly the same as before. The null distribution has a mean $\mu = 20$ and $\sigma = 6/\sqrt{50}$
+
+### b. Critical value
+
+Because this is a non-directional two-sided test, we have two critical regions in each tail of the normal distribution, so we have two critical values. These critical values correspond to the $\alpha/2$ and $1-\alpha/2$ quantiles of the null hypothesis distribution.
+
+```{r crit-two}
+# compute critical values for two-sided test
+(xcrit1 <- qnorm(alpha/2, mean = 20, sd = 6/sqrt(50)))
+(xcrit2 <- qnorm(1 - alpha/2, mean = 20, sd = 6/sqrt(50)))
+```
+
+### c. Effect size
+
+Similarly, although the hypothesis is inexact, we need to specify a specific mean for the alternative hypothesis to compute power, denoted here as $\mu_0$.
+
+Let's continue using $\mu_0 = 22$.
+
+Using the alternative hypothesis distribution, we'll compute the probability of obtaining a value *below* the first $\bar{x}_{\text{critical}1}$ AND the probability of obtaining a value *above* the second $\bar{x}_{\text{critical}2}$.
+
+```{r power-two}
+# compute power
+pnorm(xcrit1, mean = 22, sd = 6/sqrt(50), lower.tail = TRUE) +
+  pnorm(xcrit2, mean = 22, sd = 6/sqrt(50), lower.tail = FALSE)
+```
+
+# II. Using Power Functions
+
+R has some built-in functions for computing power for analyses like the $t$-test (`power.t.test()`) and ANOVA (`power.anova.test()`). Here's an example of the `power.t.test()` function. Although we haven't talked about $t$-tests yet, keep this information in the back of your mind for future research! You can compute a power level, or find the sample size, $\sigma$, $\alpha$ or $\delta$ (difference in means) needed for a certain power level.
+
+```{r function}
+# Compute power for given parameters
+power.t.test(n = 50,
+             delta = 0.5,
+             sd = 2,
+             power = NULL,
+             sig.level = 0.05,
+             alternative = "one.sided",
+             type = "one.sample")
+
+# Find sample size needed for power of 0.85
+power.t.test(n = NULL,
+             delta = 0.5,
+             sd = 2,
+             power = 0.9,
+             sig.level = 0.05,
+             alternative = "one.sided",
+             type = "one.sample")
+```
+
+The `{pwr}` package (Champely, 2020) also has numerous functions for power analyses. 
+
+# III. Using Simulation
+
+At the end of the day, power refers to the probability of correctly rejecting the null hypothesis when the null hypothesis is indeed false. Some analyses that you will encounter later in your research (or already encountered) are very complicated, with many parameters and tests. Power calculation becomes difficult. You also don't often know what effect size to use, so testing several ones is a good idea during study design. Because power is a probability, we can almost always rely on repeated simulations to estimate power. In the real world, we often don't actually know if the null hypothesis is *really* false or not (that's why we do the research in the first place!). In simulations, however, we can specify the true values of everything. As a result, we can simply *simulate* a situation when the null is false, and repeat the testing process multiple times to see how often our test correctly rejects that false null hypothesis. In other words, that is our estimated power.
+
+Here is an example of a small-scale simulation to compute a power estimate and Type I errors for a two-sided, one-sample $z$-test.
+
+First, we'll write a function that computes the proportion of test statistics that are within our defined refection region. When $H_0$ is true, that proportion is the Type I error rate. When $H_A$ is true, that proportion is our power!
+
+```{r sim-function}
+# Power function for one-sample two-sided z test
+# Testing mu = mu_0
+onesamp.power = function(mu_0,        # Hypothesized mean for alternative
+                         mu,          # Null distribution mean
+                         n,           # Sample size
+                         alpha,       # Significance level
+                         sigma2,      # Population variance
+                         n_trials)    # Simulation repetitions
+{
+  
+    # Allocate memory for saving test statistic results
+    # 1 if z statistic in rejection region, 0 otherwise
+    rejection_decision = numeric(n_trials)
+    
+    # Compute critical z values that defines rejection region
+    z_crit = qnorm(c(alpha/2, 1 - alpha/2))
+    
+    # For-loop across trials
+    for(i in 1:n_trials) {
+      
+      # Generate data based on mu (null distribution)
+      x = rnorm(n, mean = mu, sd = sqrt(sigma2))
+      
+      # Compute xbar
+      xbar = mean(x)
+      
+      # Generate test statistic
+      z_stat = (xbar - mu_0)/(sqrt(sigma2/n))
+      
+      # Is the test statistic in the rejection region?
+      # TRUE = 1; FALSE = 0
+      rejection_decision[i] = as.numeric(z_stat < z_crit[1] | z_stat > z_crit[2])
+    }
+    
+    # Return proportion of times test statistic in rejection region
+    return(mean(rejection_decision))
+
+} # end onesamp.power function
+```
+
+## 1. Estimated Type I error
+
+If we set $\mu=\mu_0$, then $H_0$ is true and the function returns the Type I error rate. Let's try with the values we have above.
+
+```{r sim-type1}
+# Set seed
+set.seed(8814)
+
+# Estimate Type I error rate
+onesamp.power(mu_0 = 20, mu = 20, n = 50, 
+              alpha = 0.05, sigma2 = 6^2, 
+              n_trials = 10000)
+```
+
+## 2. Estimated power
+
+If we set $mu_0$ to be *anything but* $\mu$, then $H_0$ is false and the function returns power. The bigger the difference between $\mu$ and $\mu_0$, the bigger the effect size, and the bigger the power. Let's create a plot of estimated power for increasing values of $\mu_0$. Again, $\mu_0$ is the hypothesized mean value that we want to compare against.
+
+```{r sim-power}
+# Set a sequence of increasing mu_0 values
+mu_0_list <- seq(20, 30, length.out = 100)
+
+# create a vector to store estimated power for each mu_0
+power_results <- numeric(length(mu_0_list))
+
+# iterate through the list of mu_0
+for(i in 1:length(mu_0_list)) {
+  
+  # use our custom simulation function
+  power_results[i] = onesamp.power(mu_0 = mu_0_list[i],
+                                   mu = 20,
+                                   n = 50,
+                                   alpha = 0.05,
+                                   sigma2 = 6^2,
+                                   n_trials = 10000)
+}
+
+# Plot power curve
+plot(x = mu_0_list, y = power_results, type = "l",
+     xlab = expression(mu[0]), 
+     ylab = "Simulated Power",
+     main = "Simulated Power Curve for One-Sample, \nTwo-Sided Hypothesis Test")
+abline(h = 0.05, lty = "dashed", lwd = 2, col = "blue")
+```
+
+
+# IV. References
+
+- This document is adapted from materials from Justin Kracht and Allie Cooperman
+- Adam Rothman, STAT 5701: Statistical Computing
